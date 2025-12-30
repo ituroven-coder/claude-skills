@@ -6,7 +6,6 @@ Web scraping через scrape.do API
 
 import os
 import sys
-import urllib.parse
 import argparse
 import requests
 from bs4 import BeautifulSoup
@@ -110,14 +109,11 @@ def fetch_via_scrapedo(url: str, token: Optional[str] = None) -> dict:
             'content': f'Ошибка: Не найден токен Scrape.do. Создайте файл {script_dir}/config/token.txt с вашим токеном или установите переменную окружения SCRAPEDO_TOKEN'
         }
     
-    # Кодируем URL
-    encoded_url = urllib.parse.quote(url, safe='')
-    
-    # Формируем запрос
+    # Формируем запрос (requests сам кодирует параметры)
     base_api = 'http://api.scrape.do'
     params = {
         'token': token,
-        'url': encoded_url
+        'url': url
     }
     
     try:
