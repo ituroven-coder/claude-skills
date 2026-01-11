@@ -1,0 +1,8 @@
+{
+  "name": "scrapedo-web-scraper",
+  "description": "Веб-скрапинг через Scrape.do с обходом защит и JavaScript рендерингом",
+  "version": "1.0.0",
+  "author": {
+    "name": "Polyakov"
+  }
+}
