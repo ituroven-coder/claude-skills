@@ -1,1 +1,0 @@
-../plugins/genome-analizer/skills/genome-analizer/SKILL.md

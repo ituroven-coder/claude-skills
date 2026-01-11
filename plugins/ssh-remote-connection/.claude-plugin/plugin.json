@@ -1,0 +1,8 @@
+{
+  "name": "ssh-remote-connection",
+  "description": "SSH подключение к удалённым серверам с agent forwarding",
+  "version": "1.0.0",
+  "author": {
+    "name": "Polyakov"
+  }
+}
