@@ -30,6 +30,12 @@
       "description": "Анализ генетических данных из VCF файла",
       "source": "./plugins/genome-analizer",
       "category": "productivity"
+    },
+    {
+      "name": "ssh-remote-connection",
+      "description": "SSH подключение к удалённым серверам с agent forwarding",
+      "source": "./plugins/ssh-remote-connection",
+      "category": "development"
     }
   ]
 }

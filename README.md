@@ -15,6 +15,7 @@
 /plugin install scrapedo-web-scraper
 /plugin install agent-deck
 /plugin install genome-analizer
+/plugin install ssh-remote-connection
 ```
 
 ### Ручная установка (без маркетплейса)
@@ -114,6 +115,26 @@ claude --plugin-dir ./plugins/agent-deck
 
 ---
 
+### [ssh-remote-connection](plugins/ssh-remote-connection/skills/ssh-remote-connection)
+
+SSH подключение к удалённым серверам с agent forwarding.
+
+- Выполнение команд на удалённом сервере
+- Agent forwarding (`-A`) для использования локальных SSH ключей
+- Управление Docker контейнерами, просмотр логов
+
+**Триггеры (RU):**
+- "выполни на сервере"
+- "проверь логи на сервере"
+- "перезапусти сервис"
+
+**Триггеры (EN):**
+- "run on server"
+- "check server logs"
+- "restart service"
+
+---
+
 ## Структура репозитория
 
 ```
@@ -124,7 +145,8 @@ polyakov-claude-skills/
 │   ├── docx-contracts/       # Плагин для .docx
 │   ├── scrapedo-web-scraper/ # Плагин для скрапинга
 │   ├── agent-deck/           # Плагин для агентов
-│   └── genome-analizer/      # Плагин для анализа генома
+│   ├── genome-analizer/      # Плагин для анализа генома
+│   └── ssh-remote-connection/# Плагин для SSH
 └── README.md
 ```
 
