@@ -1,0 +1,35 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "polyakov-claude-skills",
+  "version": "1.0.0",
+  "description": "Набор скиллов для Claude: работа с .docx, веб-скрапинг, управление агентами",
+  "owner": {
+    "name": "Polyakov"
+  },
+  "plugins": [
+    {
+      "name": "docx-contracts",
+      "description": "Заполнение Word шаблонов (договоры, формы) по данным из контекста",
+      "source": "./plugins/docx-contracts",
+      "category": "productivity"
+    },
+    {
+      "name": "scrapedo-web-scraper",
+      "description": "Веб-скрапинг через Scrape.do с обходом защит и JavaScript рендерингом",
+      "source": "./plugins/scrapedo-web-scraper",
+      "category": "productivity"
+    },
+    {
+      "name": "agent-deck",
+      "description": "Управление AI агентами через agent-deck CLI",
+      "source": "./plugins/agent-deck",
+      "category": "development"
+    },
+    {
+      "name": "genome-analizer",
+      "description": "Анализ генетических данных из VCF файла",
+      "source": "./plugins/genome-analizer",
+      "category": "productivity"
+    }
+  ]
+}
