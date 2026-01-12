@@ -14,6 +14,8 @@ Get key: https://fal.ai/dashboard/keys
 
 ## Workflow
 
+**IMPORTANT**: Always use `scripts/generate.sh` — do NOT call curl directly. The script handles API auth and polling automatically.
+
 1. **Clarify params** (if not specified):
    - Aspect ratio: `1:1` (default), `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`, `21:9`, `5:4`, `4:5`
    - Resolution: `1K` (default), `2K`, `4K`

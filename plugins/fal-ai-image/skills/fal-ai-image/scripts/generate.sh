@@ -9,7 +9,8 @@ API_BASE="https://queue.fal.run/fal-ai/nano-banana"
 
 # Load config
 if [[ -f "$CONFIG_FILE" ]]; then
-    export $(grep -v '^#' "$CONFIG_FILE" | xargs)
+    # shellcheck disable=SC1090
+    source "$CONFIG_FILE"
 fi
 
 if [[ -z "$FAL_KEY" ]]; then
