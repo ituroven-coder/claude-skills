@@ -36,7 +36,7 @@ Get key: https://fal.ai/dashboard/keys
 
 4. **Generate**:
    ```bash
-   python scripts/generate.py \
+   bash scripts/generate.sh \
      --prompt "a cat in space" \
      --aspect-ratio "1:1" \
      --resolution "1K" \
@@ -46,8 +46,10 @@ Get key: https://fal.ai/dashboard/keys
    ```
 
 5. **Show result**:
-   - CLI: Read saved file via Read tool + show URL
-   - Web: Read downloaded file + show URL as backup
+   - Script outputs JSON between `=== RESULT JSON ===` markers
+   - Parse JSON yourself to extract image URLs and show to user
+   - If saved locally: Read file via Read tool to display
+   - Always provide URL as backup (expires in ~1 hour)
 
 ## Script params
 
