@@ -1,11 +1,11 @@
 #!/bin/bash
-# Generate images using fal.ai nano-banana-pro model
+# Generate images with reference images using fal.ai nano-banana-pro/edit
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/../config/.env"
-API_BASE="https://queue.fal.run/fal-ai/nano-banana-pro"
+API_BASE="https://queue.fal.run/fal-ai/nano-banana-pro/edit"
 
 # Load config
 if [[ -f "$CONFIG_FILE" ]]; then
@@ -20,25 +20,25 @@ fi
 
 # Defaults
 PROMPT=""
-ASPECT_RATIO="1:1"
+IMAGE_URLS=""
+ASPECT_RATIO="auto"
 RESOLUTION="1K"
 NUM_IMAGES=1
 OUTPUT_FORMAT="png"
 OUTPUT_DIR=""
-FILENAME="generated"
-WEB_SEARCH="false"
+FILENAME="edited"
 
 # Parse args
 while [[ $# -gt 0 ]]; do
     case $1 in
         --prompt|-p) PROMPT="$2"; shift 2 ;;
+        --image-urls|-i) IMAGE_URLS="$2"; shift 2 ;;
         --aspect-ratio|-a) ASPECT_RATIO="$2"; shift 2 ;;
         --resolution|-r) RESOLUTION="$2"; shift 2 ;;
         --num-images|-n) NUM_IMAGES="$2"; shift 2 ;;
         --output-format|-f) OUTPUT_FORMAT="$2"; shift 2 ;;
         --output-dir|-o) OUTPUT_DIR="$2"; shift 2 ;;
         --filename) FILENAME="$2"; shift 2 ;;
-        --web-search|-w) WEB_SEARCH="true"; shift ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
 done
@@ -48,18 +48,25 @@ if [[ -z "$PROMPT" ]]; then
     exit 1
 fi
 
+if [[ -z "$IMAGE_URLS" ]]; then
+    echo "Error: --image-urls is required (comma-separated URLs, max 14)"
+    exit 1
+fi
+
 # Escape prompt for JSON
 PROMPT_ESCAPED=$(echo "$PROMPT" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\n/\\n/g')
 
-# Build JSON
-JSON_PAYLOAD="{\"prompt\":\"$PROMPT_ESCAPED\",\"num_images\":$NUM_IMAGES,\"aspect_ratio\":\"$ASPECT_RATIO\",\"resolution\":\"$RESOLUTION\",\"output_format\":\"$OUTPUT_FORMAT\""
-if [[ "$WEB_SEARCH" == "true" ]]; then
-    JSON_PAYLOAD="$JSON_PAYLOAD,\"enable_web_search\":true"
-fi
-JSON_PAYLOAD="$JSON_PAYLOAD}"
+# Convert comma-separated URLs to JSON array
+# Input: "url1,url2,url3"
+# Output: ["url1","url2","url3"]
+IMAGE_URLS_JSON=$(echo "$IMAGE_URLS" | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
 
-echo "Submitting request..."
+# Build JSON
+JSON_PAYLOAD="{\"prompt\":\"$PROMPT_ESCAPED\",\"image_urls\":$IMAGE_URLS_JSON,\"num_images\":$NUM_IMAGES,\"aspect_ratio\":\"$ASPECT_RATIO\",\"resolution\":\"$RESOLUTION\",\"output_format\":\"$OUTPUT_FORMAT\"}"
+
+echo "Submitting edit request..."
 echo "Prompt: ${PROMPT:0:100}..."
+echo "Reference images: $(echo "$IMAGE_URLS" | tr ',' '\n' | wc -l | tr -d ' ')"
 echo "Settings: $ASPECT_RATIO, $RESOLUTION, $OUTPUT_FORMAT"
 echo ""
 
