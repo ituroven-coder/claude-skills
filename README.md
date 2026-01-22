@@ -16,6 +16,7 @@
 /plugin install agent-deck
 /plugin install genome-analizer
 /plugin install ssh-remote-connection
+/plugin install yandex-wordstat
 ```
 
 ### Ручная установка (без маркетплейса)
@@ -135,6 +136,26 @@ SSH подключение к удалённым серверам с agent forwa
 
 ---
 
+### [yandex-wordstat](plugins/yandex-wordstat/skills/yandex-wordstat)
+
+Анализ поискового спроса через Yandex Wordstat API.
+
+- Топ поисковых запросов по фразе
+- Динамика спроса по месяцам
+- Региональная статистика
+- Проверка интента через веб-поиск
+
+**Триггеры (RU):**
+- "проанализируй спрос на"
+- "найди запросы для рекламы"
+- "какой спрос на [тему]"
+
+**Триггеры (EN):**
+- "analyze search demand"
+- "find keywords for"
+
+---
+
 ## Структура репозитория
 
 ```
@@ -146,7 +167,8 @@ polyakov-claude-skills/
 │   ├── scrapedo-web-scraper/ # Плагин для скрапинга
 │   ├── agent-deck/           # Плагин для агентов
 │   ├── genome-analizer/      # Плагин для анализа генома
-│   └── ssh-remote-connection/# Плагин для SSH
+│   ├── ssh-remote-connection/# Плагин для SSH
+│   └── yandex-wordstat/      # Плагин для Wordstat API
 └── README.md
 ```
 
