@@ -1,43 +1,34 @@
 # Получение токена Yandex Wordstat API
 
-## Шаг 1: Зарегистрируйте приложение (если ещё нет)
+Wordstat API бесплатный с июня 2025. Лимиты: 1000 запросов/день, 10 запросов/сек.
 
-1. Перейдите на https://oauth.yandex.ru/client/new
-2. Укажите название приложения
-3. В разделе "Платформы" выберите "Веб-сервисы"
-4. В "Права" добавьте: **Яндекс.Директ API**
-5. Сохраните `client_id` и `client_secret`
+## Шаг 1: Запросите доступ к API
+
+1. Перейдите на https://yandex.ru/support2/wordstat/ru/content/api-wordstat
+2. Прочитайте инструкцию
+3. **Внизу страницы заполните и отправьте форму** для разблокировки API
+4. Дождитесь одобрения (обычно в течение дня)
 
 ## Шаг 2: Получите OAuth токен
 
-### Способ A: Через браузер (простой)
+После одобрения доступа откройте в браузере:
 
-1. Откройте в браузере (замените YOUR_CLIENT_ID):
-   ```
-   https://oauth.yandex.ru/authorize?response_type=token&client_id=YOUR_CLIENT_ID
-   ```
-
-2. Авторизуйтесь и дайте разрешения приложению
-
-3. Скопируйте токен из URL после редиректа:
-   ```
-   https://oauth.yandex.ru/#access_token=ВАШТОКЕН&token_type=bearer&expires_in=31536000
-   ```
-
-### Способ B: Через скрипт
-
-```bash
-bash scripts/get_token.sh --client-id YOUR_CLIENT_ID --client-secret YOUR_SECRET
+```
+https://oauth.yandex.ru/authorize?response_type=token&client_id=ВАШ_CLIENT_ID
 ```
 
-Скрипт:
-1. Покажет URL для авторизации
-2. Попросит ввести код подтверждения
-3. Автоматически сохранит токен в `.env`
+Замените `ВАШ_CLIENT_ID` на ID вашего приложения.
+
+После авторизации токен будет в URL:
+```
+https://oauth.yandex.ru/#access_token=ВАШТОКЕН&token_type=bearer&expires_in=31536000
+```
+
+Скопируйте значение `access_token`.
 
 ## Шаг 3: Настройте токен
 
-Если получили токен вручную, создайте файл `.env`:
+Создайте файл `.env` в папке `config/`:
 
 ```bash
 cp config/.env.example config/.env
@@ -55,19 +46,29 @@ YANDEX_WORDSTAT_TOKEN=ваш_токен_здесь
 bash scripts/quota.sh
 ```
 
+Должно показать "Wordstat API: OK".
+
+## Частые проблемы
+
+### "Authorization error" (код 53)
+- Не отправили форму на странице Wordstat → отправьте и дождитесь одобрения
+- Токен устарел → получите новый
+- Токен от другого приложения → используйте правильный client_id
+
+### Методы недоступны
+- Доступ к API ещё не одобрен → дождитесь письма от Яндекса
+
+## Лимиты
+
+- **10 запросов в секунду**
+- **1000 запросов в день**
+
 ## Срок жизни токена
 
-- Токен действует **1 год** (expires_in=31536000)
-- После истечения нужно получить новый
-
-## Лимиты API
-
-- **10 запросов в секунду** (rate limit)
-- **~1000 запросов в день** (зависит от аккаунта)
-- Отчёты Wordstat создаются асинхронно (до 60 сек)
+Токен действует **1 год**. После истечения получите новый по той же ссылке.
 
 ## Документация
 
-- OAuth Яндекса: https://yandex.ru/dev/id/doc/ru/concepts/ya-oauth-intro
-- API Wordstat: https://yandex.ru/dev/direct/doc/reports/wordstat.html
+- Wordstat API: https://yandex.ru/support2/wordstat/ru/content/api-wordstat
+- Структура API: https://yandex.ru/support2/wordstat/ru/content/api-structure
 - Операторы: https://yandex.ru/support/direct/keywords/symbols-and-operators.html
