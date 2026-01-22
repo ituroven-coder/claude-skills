@@ -1,0 +1,7 @@
+{
+  "name": "yandex-wordstat",
+  "version": "1.0.0",
+  "description": "Analyze search demand via Yandex Wordstat API",
+  "author": "polyakov",
+  "skills": ["yandex-wordstat"]
+}
