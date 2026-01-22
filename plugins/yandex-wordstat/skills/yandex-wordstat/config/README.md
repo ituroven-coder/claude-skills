@@ -5,7 +5,7 @@
 1. Перейдите на https://oauth.yandex.ru/client/new
 2. Укажите название приложения
 3. В разделе "Платформы" выберите "Веб-сервисы"
-4. В "Права" добавьте: **Яндекс.Директ API**
+4. В "Права" добавьте: **Wordstat API** (или подайте заявку на доступ)
 5. Сохраните `client_id` и `client_secret`
 
 ## Шаг 2: Получите OAuth токен
@@ -68,6 +68,7 @@ bash scripts/quota.sh
 
 ## Документация
 
+- Wordstat API: https://yandex.ru/support2/wordstat/ru/content/api-wordstat
+- Структура API: https://yandex.ru/support2/wordstat/ru/content/api-structure
 - OAuth Яндекса: https://yandex.ru/dev/id/doc/ru/concepts/ya-oauth-intro
-- API Wordstat: https://yandex.ru/dev/direct/doc/reports/wordstat.html
 - Операторы: https://yandex.ru/support/direct/keywords/symbols-and-operators.html
