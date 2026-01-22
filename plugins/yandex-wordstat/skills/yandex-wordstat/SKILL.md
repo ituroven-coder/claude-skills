@@ -18,13 +18,88 @@ See `config/README.md` for token setup instructions.
 2. **Creative semantic expansion** — think like a customer
 3. **Always clarify region** — ask user for target region before analysis
 4. **Show operators in reports** — include Wordstat operators for verification
+5. **VERIFY INTENT via web search** — always check what people actually want to buy
+
+## CRITICAL: Intent Verification
+
+**Before marking ANY query as "target", verify intent via WebSearch!**
+
+### The Problem
+
+Query "каолиновая вата для дымохода" looks relevant for chimney seller, but:
+- People search this to BUY COTTON WOOL, not chimneys
+- They already HAVE a chimney and need insulation material
+- This is NOT a target query for chimney sales!
+
+### Verification Process
+
+For every promising query, ASK YOURSELF:
+1. **What does the person want to BUY?** (not just "what are they interested in")
+2. **Will they buy OUR product from this search?**
+3. **Or are they looking for something adjacent/complementary?**
+
+### MANDATORY: Use WebSearch
+
+**Always run WebSearch** to check:
+```
+WebSearch: "каолиновая вата для дымохода" что ищут покупатели
+```
+
+Look at search results:
+- What products are shown?
+- What questions do people ask?
+- Is this informational or transactional intent?
+
+### Red Flags (likely NOT target)
+
+- Query contains "для [вашего продукта]" — they need ACCESSORY, not your product
+- Query about materials/components — they DIY, not buy finished product
+- Query has "своими руками", "как сделать" — informational, not buying
+- Query about repair/maintenance — they already own it
+
+### Examples
+
+| Query | Looks like | Actually | Target? |
+|-------|------------|----------|---------|
+| каолиновая вата для дымохода | chimney buyer | cotton wool buyer | ❌ NO |
+| дымоход купить | chimney buyer | chimney buyer | ✅ YES |
+| утепление дымохода | chimney buyer | insulation DIYer | ❌ NO |
+| дымоход сэндвич цена | chimney buyer | chimney buyer | ✅ YES |
+| потерпевший дтп | lawyer client | news reader | ❌ NO |
+| юрист после дтп | lawyer client | lawyer client | ✅ YES |
+
+### Workflow Update
+
+1. Find queries in Wordstat
+2. **WebSearch each promising query to verify intent**
+3. Mark as target ONLY if intent matches the sale
+4. Report both target AND rejected queries with reasoning
 
 ## Workflow
 
-1. **Check connection**: `bash scripts/quota.sh`
-2. **Clarify region** with user (default: all Russia)
-3. **Run analysis** using appropriate script
-4. **Present results** with operators and recommendations
+### STOP! Before any analysis:
+
+1. **ASK user about region and WAIT for answer:**
+   ```
+   "Для какого региона анализировать спрос?
+   - Вся Россия (по умолчанию)
+   - Москва и область
+   - Конкретный город (какой?)"
+   ```
+   **НЕ ПРОДОЛЖАЙ пока пользователь не ответит!**
+
+2. **ASK about business goal:**
+   ```
+   "Что именно вы продаёте/рекламируете?
+   Это важно для фильтрации нецелевых запросов."
+   ```
+
+### After getting answers:
+
+3. **Check connection**: `bash scripts/quota.sh`
+4. **Run analysis** using appropriate script
+5. **Verify intent via WebSearch** for each promising query
+6. **Present results** with target/non-target separation
 
 ## Scripts
 
@@ -170,19 +245,31 @@ Run `bash scripts/regions_tree.sh` for full list.
 ## Example Session
 
 ```
-User: Analyze "юрист по дтп" in Moscow
+User: Найди запросы для рекламы дымоходов
 
-1. bash scripts/quota.sh
-   → API OK
+Claude: Для какого региона анализировать спрос?
+        И уточните — вы продаёте готовые дымоходы или
+        материалы для их изготовления/утепления?
 
-2. bash scripts/search_region.sh --name "Москва"
-   → ID 213
+User: Москва, продаём готовые сэндвич-дымоходы
 
-3. bash scripts/top_requests.sh --phrase "юрист !по дтп" --regions 213
-   → Top phrases
+Claude: [Запускает анализ для региона 213]
 
-4. bash scripts/dynamics.sh --phrase "юрист дтп" --from-date 2025-01-01
-   → Monthly trends
+        Нашёл запросы. Проверяю интент через веб-поиск...
 
-5. Present results with recommendations
+        ✅ ЦЕЛЕВЫЕ (покупают дымоходы):
+        - "дымоход сэндвич купить" — 450 показов
+        - "дымоход для бани цена" — 380 показов
+
+        ❌ НЕ ЦЕЛЕВЫЕ (покупают другое):
+        - "каолиновая вата для дымохода" — ищут утеплитель, не дымоход
+        - "монтаж дымохода своими руками" — DIY, не покупатели
+        - "чистка дымохода" — уже владеют, сервисный запрос
 ```
+
+### Key Points
+
+1. **ВСЕГДА спрашивай регион и жди ответа**
+2. **ВСЕГДА уточняй что именно продаёт клиент**
+3. **ВСЕГДА проверяй интент через WebSearch**
+4. **Разделяй отчёт на целевые/нецелевые с объяснением**
