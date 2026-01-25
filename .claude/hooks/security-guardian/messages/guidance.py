@@ -4,53 +4,35 @@ from checks.base import CheckResult
 
 
 def format_block_message(result: CheckResult) -> str:
-    """Format a block message for Claude.
+    """Format a DENY message for Claude (hard block, no confirmation possible).
 
     Args:
-        result: CheckResult with block status.
+        result: CheckResult with block status and DENY decision.
 
     Returns:
-        Formatted message string.
+        Formatted message string for JSON output.
     """
-    parts = [
-        f"🛡️ Security Guardian: Operation blocked",
-        f"",
-        f"Reason: {result.reason}",
-    ]
+    parts = [f"BLOCKED: {result.reason}"]
 
     if result.guidance:
-        parts.append(f"")
         parts.append(f"Guidance: {result.guidance}")
-
-    if result.check_name:
-        parts.append(f"")
-        parts.append(f"Check: {result.check_name}")
 
     return "\n".join(parts)
 
 
 def format_confirm_message(result: CheckResult) -> str:
-    """Format a confirmation request message for Claude.
+    """Format an ASK message for Claude (soft block, user can confirm).
 
     Args:
-        result: CheckResult with confirm status.
+        result: CheckResult with confirm status and ASK decision.
 
     Returns:
-        Formatted message string.
+        Formatted message string for JSON output.
     """
-    parts = [
-        f"⚠️ Security Guardian: Confirmation required",
-        f"",
-        f"Reason: {result.reason}",
-    ]
+    parts = [f"CONFIRM: {result.reason}"]
 
     if result.guidance:
-        parts.append(f"")
         parts.append(f"Guidance: {result.guidance}")
-
-    if result.check_name:
-        parts.append(f"")
-        parts.append(f"Check: {result.check_name}")
 
     return "\n".join(parts)
 

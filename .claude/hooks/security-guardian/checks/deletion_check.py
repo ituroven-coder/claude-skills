@@ -52,11 +52,11 @@ class DeletionCheck(SecurityCheck):
         for path_str in paths:
             resolved = resolve_path(path_str)
 
-            # Check if path is outside project
+            # Check if path is outside project - ASK (user can confirm)
             if not is_path_within_allowed(
                 resolved, self.project_root, self.allowed_paths
             ):
-                return self._block(
+                return self._ask(
                     reason=f"Cannot delete files outside project: {path_str}",
                     guidance=f"Give user the command: `rm {' '.join(cmd.flags)} {path_str}`",
                 )
@@ -81,18 +81,18 @@ class DeletionCheck(SecurityCheck):
             # Already handled by directory check
             return self._allow()
 
-        # Check protected directories
+        # Check protected directories - ASK (user can confirm)
         protected = self._get_protected_directories()
         for protected_path in protected:
             if rel_str == protected_path or rel_str.startswith(protected_path + "/"):
-                return self._block(
+                return self._ask(
                     reason=f"Cannot recursively delete protected path: {original_path}",
                     guidance=f"Path '{original_path}' is protected. Give user the command if needed.",
                 )
 
-        # Warn about recursive deletion at project root
+        # Warn about recursive deletion at project root - ASK (user can confirm)
         if resolved == self.project_root or rel_str == ".":
-            return self._block(
+            return self._ask(
                 reason="Cannot recursively delete project root",
                 guidance="Deleting entire project is blocked. Be more specific about what to delete.",
             )

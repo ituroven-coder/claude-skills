@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from config import load_config
-from checks.base import CheckResult, CheckStatus
+from checks.base import CheckResult, CheckStatus, PermissionDecision
 from handlers.bash_handler import BashHandler
 from handlers.read_handler import ReadHandler
 from handlers.write_handler import WriteHandler, EditHandler, NotebookEditHandler
@@ -143,15 +143,26 @@ def main():
             f"[{result.status.value.upper()}] {tool_name}: {result.reason}"
         )
 
-    # Output result to stderr (Claude Code expects error messages there)
-    if result.is_blocked:
-        print(format_block_message(result), file=sys.stderr)
-        sys.exit(2)
-    elif result.needs_confirmation:
-        print(format_confirm_message(result), file=sys.stderr)
-        sys.exit(2)
+    # Output JSON with permissionDecision for non-allowed operations
+    # Claude Code reads stdout for JSON decisions
+    decision = result.permission_decision
+
+    if decision == PermissionDecision.DENY:
+        output = {
+            "permissionDecision": "deny",
+            "message": format_block_message(result),
+        }
+        print(json.dumps(output))
+        sys.exit(0)  # exit 0 so Claude Code processes JSON
+    elif decision == PermissionDecision.ASK:
+        output = {
+            "permissionDecision": "ask",
+            "message": format_confirm_message(result),
+        }
+        print(json.dumps(output))
+        sys.exit(0)  # exit 0 so Claude Code processes JSON
     else:
-        # Allow - exit 0 with no output
+        # ALLOW - exit 0 with no output
         sys.exit(0)
 
 

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from checks.directory_check import DirectoryCheck
+from checks.base import PermissionDecision
 from config import SecurityConfig
 
 
@@ -28,24 +29,27 @@ class TestDirectoryCheck:
         result = directory_check.check_path(str(test_file), operation="cat")
         assert result.is_allowed
 
-    def test_path_outside_project_blocked(self, directory_check):
-        """Test that paths outside project are blocked."""
+    def test_path_outside_project_asks(self, directory_check):
+        """Test that paths outside project require confirmation."""
         result = directory_check.check_path("/etc/passwd", operation="cat")
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
         assert "outside project" in result.reason.lower()
 
-    def test_relative_path_escape_blocked(self, directory_check):
-        """Test that relative path escape is blocked."""
+    def test_relative_path_escape_asks(self, directory_check):
+        """Test that relative path escape requires confirmation."""
         result = directory_check.check_path("../../../etc/passwd", operation="cat")
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
-    def test_home_directory_blocked(self, directory_check):
-        """Test that home directory access is blocked."""
+    def test_home_directory_asks(self, directory_check):
+        """Test that home directory access requires confirmation."""
         result = directory_check.check_path("~/notes.txt", operation="cat")
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
-    def test_symlink_escape_blocked(self, directory_check, temp_project_dir):
-        """Test that symlink escape is blocked."""
+    def test_symlink_escape_denied(self, directory_check, temp_project_dir):
+        """Test that symlink escape is hard denied (security bypass)."""
         # Create a symlink pointing outside project
         link_path = temp_project_dir / "escape_link"
         try:
@@ -54,16 +58,19 @@ class TestDirectoryCheck:
             pytest.skip("Cannot create symlinks")
 
         result = directory_check.check_path(str(link_path / "passwd"), operation="cat")
-        assert result.is_blocked
-        assert "symlink" in result.reason.lower() or "outside" in result.reason.lower()
+        assert not result.is_allowed
+        # Symlink escape should be DENY (hard block)
+        assert result.permission_decision == PermissionDecision.DENY
+        assert "symlink" in result.reason.lower()
 
-    def test_command_with_outside_path_blocked(self, directory_check, config):
-        """Test command that accesses outside path is blocked."""
+    def test_command_with_outside_path_asks(self, directory_check, config):
+        """Test command that accesses outside path requires confirmation."""
         from parsers.bash_parser import parse_bash_command
 
         parsed = parse_bash_command("cat /home/user/secret.txt")
         result = directory_check.check_command("cat /home/user/secret.txt", parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
     def test_command_inside_project_allowed(self, directory_check, temp_project_dir):
         """Test command inside project is allowed."""

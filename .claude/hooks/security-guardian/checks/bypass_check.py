@@ -51,7 +51,7 @@ class BypassCheck(SecurityCheck):
         for cmd in parsed_commands:
             for blocked in self.config.bypass_prevention.hard_blocked:
                 if cmd.command == blocked:
-                    return self._block(
+                    return self._deny(
                         reason=f"Command '{blocked}' is blocked (potential bypass)",
                         guidance="Use explicit commands instead of eval/exec.",
                     )
@@ -73,7 +73,7 @@ class BypassCheck(SecurityCheck):
 
         for cmd in parsed_commands:
             if cmd.variable_as_command:
-                return self._block(
+                return self._deny(
                     reason="Variable used as command (potential bypass)",
                     guidance="Use explicit commands. Variable expansion as command is blocked.",
                 )
@@ -85,7 +85,7 @@ class BypassCheck(SecurityCheck):
         shell_targets = self.config.bypass_prevention.block_shell_pipe_targets
 
         if is_pipe_to_shell(parsed_commands, shell_targets):
-            return self._block(
+            return self._deny(
                 reason="Piping to shell detected (dangerous pattern)",
                 guidance="Cannot pipe to shell. Download file first, review, then execute.",
             )
@@ -99,7 +99,7 @@ class BypassCheck(SecurityCheck):
         for pattern in self.config.bypass_prevention.block_shell_exec_patterns:
             # Check both raw command and parsed commands
             if pattern in raw_command:
-                return self._block(
+                return self._deny(
                     reason=f"Shell exec pattern detected: {pattern}",
                     guidance="Direct shell execution with -c is blocked. Run commands directly.",
                 )
@@ -108,7 +108,7 @@ class BypassCheck(SecurityCheck):
         for cmd in parsed_commands:
             if cmd.command in ("sh", "bash", "zsh", "dash", "ksh", "ash"):
                 if "-c" in cmd.flags:
-                    return self._block(
+                    return self._deny(
                         reason=f"Shell exec detected: {cmd.command} -c",
                         guidance="Direct shell execution is blocked. Run the inner command directly.",
                     )
@@ -116,14 +116,14 @@ class BypassCheck(SecurityCheck):
                 # Check for env -i bash/sh
                 for arg in cmd.args:
                     if arg in ("bash", "sh", "zsh"):
-                        return self._block(
+                        return self._deny(
                             reason="env shell execution detected",
                             guidance="Shell execution via env is blocked.",
                         )
             elif cmd.command == "busybox":
                 # Check for busybox sh
                 if "sh" in cmd.args:
-                    return self._block(
+                    return self._deny(
                         reason="busybox shell execution detected",
                         guidance="Shell execution via busybox is blocked.",
                     )

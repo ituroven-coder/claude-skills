@@ -3,6 +3,7 @@
 import pytest
 
 from checks.unpack_check import UnpackCheck
+from checks.base import PermissionDecision
 from config import SecurityConfig
 from parsers.bash_parser import parse_bash_command
 
@@ -16,47 +17,53 @@ def unpack_check(temp_project_dir, config):
 class TestUnpackCheck:
     """Tests for UnpackCheck."""
 
-    def test_tar_outside_project_blocked(self, unpack_check):
-        """Test that tar extraction outside project is blocked."""
+    def test_tar_outside_project_asks(self, unpack_check):
+        """Test that tar extraction outside project requires confirmation."""
         cmd = "tar -C /tmp/outside -xf archive.tar"
         parsed = parse_bash_command(cmd)
         result = unpack_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
-    def test_tar_relative_escape_blocked(self, unpack_check):
-        """Test that tar with relative path escape is blocked."""
+    def test_tar_relative_escape_asks(self, unpack_check):
+        """Test that tar with relative path escape requires confirmation."""
         cmd = "tar -C ../outside -xf archive.tar"
         parsed = parse_bash_command(cmd)
         result = unpack_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
-    def test_unzip_outside_project_blocked(self, unpack_check):
-        """Test that unzip outside project is blocked."""
+    def test_unzip_outside_project_asks(self, unpack_check):
+        """Test that unzip outside project requires confirmation."""
         cmd = "unzip -d /tmp/outside file.zip"
         parsed = parse_bash_command(cmd)
         result = unpack_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
-    def test_unzip_relative_escape_blocked(self, unpack_check):
-        """Test that unzip with relative escape is blocked."""
+    def test_unzip_relative_escape_asks(self, unpack_check):
+        """Test that unzip with relative escape requires confirmation."""
         cmd = "unzip -d ../outside file.zip"
         parsed = parse_bash_command(cmd)
         result = unpack_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
-    def test_bsdtar_substitution_blocked(self, unpack_check):
-        """Test that bsdtar -s is blocked."""
+    def test_bsdtar_substitution_denied(self, unpack_check):
+        """Test that bsdtar -s is denied (security bypass)."""
         cmd = "bsdtar -s '/^/tmp/' -xf archive.tar"
         parsed = parse_bash_command(cmd)
         result = unpack_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.DENY
 
-    def test_python_zipfile_outside_blocked(self, unpack_check):
-        """Test that python zipfile extraction outside is blocked."""
+    def test_python_zipfile_outside_asks(self, unpack_check):
+        """Test that python zipfile extraction outside requires confirmation."""
         cmd = "python -m zipfile -e archive.zip /tmp/outside"
         parsed = parse_bash_command(cmd)
         result = unpack_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
     def test_tar_in_project_allowed(self, unpack_check, temp_project_dir):
         """Test that tar in project is allowed."""

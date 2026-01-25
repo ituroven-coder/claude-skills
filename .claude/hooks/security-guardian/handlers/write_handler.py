@@ -1,9 +1,14 @@
 """Write/Edit tool handler."""
 
+from pathlib import Path
 from typing import Any
 
 from handlers.base import ToolHandler, CheckResult
-from checks import DirectoryCheck, SecretsCheck
+from checks import DirectoryCheck, SecretsCheck, CodeContentCheck
+
+
+# Script file extensions that need content checking
+SCRIPT_EXTENSIONS = {".py", ".sh", ".bash", ".rb", ".pl", ".js"}
 
 
 class WriteHandler(ToolHandler):
@@ -15,17 +20,19 @@ class WriteHandler(ToolHandler):
         super().__init__(config)
         self.directory_check = DirectoryCheck(config)
         self.secrets_check = SecretsCheck(config)
+        self.code_content_check = CodeContentCheck(config)
 
     def handle(self, tool_input: dict[str, Any]) -> CheckResult:
         """Handle a Write/Edit tool invocation.
 
         Args:
-            tool_input: Write/Edit tool input with 'file_path' field.
+            tool_input: Write/Edit tool input with 'file_path' and 'content' fields.
 
         Returns:
             CheckResult with status and guidance.
         """
         file_path = tool_input.get("file_path", "")
+        content = tool_input.get("content", "")
 
         if not file_path:
             return self._allow()
@@ -40,7 +47,18 @@ class WriteHandler(ToolHandler):
         if not result.is_allowed:
             return result
 
+        # Check content for dangerous patterns (for script files)
+        if self._is_script_file(file_path) and content:
+            result = self.code_content_check.check_content(content, file_path)
+            if not result.is_allowed:
+                return result
+
         return self._allow()
+
+    def _is_script_file(self, file_path: str) -> bool:
+        """Check if file is a script that needs content checking."""
+        suffix = Path(file_path).suffix.lower()
+        return suffix in SCRIPT_EXTENSIONS
 
 
 class EditHandler(WriteHandler):
@@ -58,13 +76,15 @@ class NotebookEditHandler(WriteHandler):
         """Handle a NotebookEdit tool invocation.
 
         Args:
-            tool_input: NotebookEdit tool input with 'notebook_path' field.
+            tool_input: NotebookEdit tool input with 'notebook_path' and 'new_source'.
 
         Returns:
             CheckResult with status and guidance.
         """
         # NotebookEdit uses 'notebook_path' instead of 'file_path'
         notebook_path = tool_input.get("notebook_path", "")
+        new_source = tool_input.get("new_source", "")
+        cell_type = tool_input.get("cell_type", "code")
 
         if not notebook_path:
             return self._allow()
@@ -78,5 +98,14 @@ class NotebookEditHandler(WriteHandler):
         result = self.secrets_check.check_path(notebook_path, operation="write")
         if not result.is_allowed:
             return result
+
+        # Check code cell content for dangerous patterns
+        if cell_type == "code" and new_source:
+            result = self.code_content_check.check_content(
+                new_source,
+                f"{notebook_path} (cell)",
+            )
+            if not result.is_allowed:
+                return result
 
         return self._allow()

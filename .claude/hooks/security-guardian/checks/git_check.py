@@ -38,9 +38,9 @@ class GitCheck(SecurityCheck):
         if self._is_allowed(operation):
             return self._allow()
 
-        # Check if hard blocked
+        # Check if hard blocked - DENY (no confirmation possible)
         if self._is_hard_blocked(operation):
-            return self._block(
+            return self._deny(
                 reason=f"Destructive git operation blocked: {operation}",
                 guidance=self._get_safer_alternative(operation),
             )

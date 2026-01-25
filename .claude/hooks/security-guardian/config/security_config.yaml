@@ -185,6 +185,119 @@ unpack_protection:
     - "python -m zipfile -e"  # unpacking via Python
     - "python3 -m zipfile -e"
 
+# Sensitive files and patterns (user configures for project)
+sensitive_files:
+  # Files with secrets (cannot read via Read tool)
+  forbidden_read:
+    - "**/.env"
+    - "**/.env.*"
+    - "!**/.env.example"      # exception
+    - "!**/.env.template"
+    - "**/secrets.yaml"
+    - "**/credentials.json"
+    - "**/*.pem"
+    - "**/*.key"
+    - "**/id_rsa*"
+    - "**/id_ed25519*"
+
+  # Patterns in code indicating secret access
+  code_patterns:
+    - pattern: 'open\([''"].*\.env'
+      description: "Reading .env file"
+    - pattern: 'open\([''"].*\.pem'
+      description: "Reading private key"
+    - pattern: 'load_dotenv\('
+      description: "Loading .env via dotenv"
+    - pattern: '\.aws/credentials'
+      description: "AWS credentials access"
+    - pattern: '\.netrc'
+      description: "Netrc file access"
+    - pattern: '\.npmrc'
+      description: "NPM config access"
+    - pattern: '\.pypirc'
+      description: "PyPI config access"
+
+  # Environment variables with secrets (check os.getenv/os.environ)
+  secret_env_vars:
+    - "API_KEY"
+    - "SECRET_KEY"
+    - "DATABASE_URL"
+    - "AWS_ACCESS_KEY_ID"
+    - "AWS_SECRET_ACCESS_KEY"
+    - "GITHUB_TOKEN"
+    - "OPENAI_API_KEY"
+    - "ANTHROPIC_API_KEY"
+    - "STRIPE_SECRET_KEY"
+    - "PRIVATE_KEY"
+    - "PASSWORD"
+    - "DB_PASSWORD"
+
+  # Custom project patterns (user adds their own)
+  custom_patterns: []
+  # Example:
+  # - pattern: 'stripe\.api_key'
+  #   description: "Stripe API key"
+
+# Dangerous code combinations for exfiltration detection
+dangerous_operations:
+  # Network calls (for sending data out)
+  network:
+    - 'import\s+(requests|urllib|httpx|aiohttp)'
+    - 'from\s+(requests|urllib|httpx)\s'
+    - 'socket\.'
+    - 'urlopen\('
+    - 'curl\s'
+    - 'wget\s'
+
+  # Direct access to sensitive data
+  sensitive_access:
+    - '\.env'
+    - '/etc/passwd'
+    - '~/.ssh'
+    - '\.aws/credentials'
+    - '\.netrc'
+    - '\.npmrc'
+    - '\.pypirc'
+
+  # Secret scanning patterns (dangerous by itself!)
+  secret_scanning:
+    - 'grep.*password'
+    - 'grep.*secret'
+    - 'grep.*token'
+    - 'grep.*api.key'
+    - 'find.*\.env'
+    - 'find.*\.ssh'
+    - 'find.*\.aws'
+    - 'glob\(.*\.env'
+    - 'os\.walk.*password'
+    - 're\.search.*password'
+    - 're\.findall.*secret'
+
+  # System reconnaissance
+  system_recon:
+    - 'os\.environ'           # all env vars
+    - 'getpass\.getuser'      # username
+    - 'socket\.gethostname'   # hostname
+    - 'platform\.'            # system info
+    - 'subprocess.*whoami'
+    - 'subprocess.*id\s'
+    - 'subprocess.*uname'
+
+  # Dynamic execution (dangerous by itself)
+  dynamic_execution:
+    - 'exec\('
+    - 'eval\('
+    - 'compile\('
+    - '__import__\('
+    - 'importlib\.import_module'
+    - 'subprocess\..*shell=True'
+
+  # Shell execution patterns
+  shell_execution:
+    - 'subprocess\.'
+    - 'os\.system\('
+    - 'os\.popen\('
+
 # Protected paths INSIDE project (additional layer)
 protected_paths:
   no_modify:

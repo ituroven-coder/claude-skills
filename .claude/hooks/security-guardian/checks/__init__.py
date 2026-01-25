@@ -1,6 +1,6 @@
 """Security checks module for Security Guardian."""
 
-from checks.base import CheckResult, SecurityCheck, CheckStatus
+from checks.base import CheckResult, SecurityCheck, CheckStatus, PermissionDecision
 from checks.directory_check import DirectoryCheck
 from checks.git_check import GitCheck
 from checks.deletion_check import DeletionCheck
@@ -9,10 +9,12 @@ from checks.download_check import DownloadCheck
 from checks.unpack_check import UnpackCheck
 from checks.execution_check import ExecutionCheck
 from checks.secrets_check import SecretsCheck
+from checks.code_content_check import CodeContentCheck
 
 __all__ = [
     "CheckResult",
     "CheckStatus",
+    "PermissionDecision",
     "SecurityCheck",
     "DirectoryCheck",
     "GitCheck",
@@ -22,4 +24,5 @@ __all__ = [
     "UnpackCheck",
     "ExecutionCheck",
     "SecretsCheck",
+    "CodeContentCheck",
 ]

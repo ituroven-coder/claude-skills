@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from checks.base import CheckResult, CheckStatus, SecurityCheck
+from checks.base import CheckResult, CheckStatus, SecurityCheck, PermissionDecision
 from parsers.bash_parser import ParsedCommand, extract_paths_from_command
 from parsers.path_parser import (
     get_project_root,
@@ -66,19 +66,19 @@ class DirectoryCheck(SecurityCheck):
         # Resolve path relative to project root (not cwd, which may be security-guardian dir)
         resolved = resolve_path(path, base_dir=self.project_root)
 
-        # Check for symlink escape
+        # Check for symlink escape - HARD DENY (security bypass)
         if is_symlink_escape(path, self.project_root, base_dir=self.project_root):
-            return self._block(
+            return self._deny(
                 reason=f"Symlink escape detected: '{path}' resolves to '{resolved}' outside project",
                 guidance=(
                     f"Symlink points outside project boundaries. "
-                    f"Give user the command: `{operation} {path}`"
+                    f"This is a security bypass attempt."
                 ),
             )
 
-        # Check if within allowed paths
+        # Check if within allowed paths - ASK (user can confirm)
         if not is_path_within_allowed(resolved, self.project_root, self.allowed_paths):
-            return self._block(
+            return self._ask(
                 reason=f"Path '{resolved}' is outside project boundaries",
                 guidance=self._get_guidance_for_operation(operation, path),
             )
