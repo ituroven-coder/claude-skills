@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"$CLAUDE_PROJECT_DIR/.claude/hooks/security-guardian\" && uv run main.py 2>/dev/null || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/security-guardian/main.py\"",
+            "command": "cd \"$CLAUDE_PROJECT_DIR/.claude/hooks/security-guardian\" && { uv run main.py 2>/dev/null; rc=$?; if [ $rc -eq 0 ] || [ $rc -eq 2 ]; then exit $rc; fi; python3 main.py; }",
             "timeout": 10000
           }
         ]
