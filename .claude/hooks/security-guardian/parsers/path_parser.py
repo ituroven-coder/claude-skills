@@ -98,7 +98,11 @@ def is_path_within_allowed(
     return False
 
 
-def is_symlink_escape(path_str: str, project_root: Path) -> bool:
+def is_symlink_escape(
+    path_str: str,
+    project_root: Path,
+    base_dir: Optional[Path] = None,
+) -> bool:
     """Check if a path uses symlinks to escape project boundaries.
 
     This detects when a symlink within the project points to a location
@@ -108,12 +112,13 @@ def is_symlink_escape(path_str: str, project_root: Path) -> bool:
     Args:
         path_str: Original path string.
         project_root: Project root directory.
+        base_dir: Base directory for resolving relative paths.
 
     Returns:
         True if the resolved path escapes project boundaries via symlink.
     """
     # Resolve both paths fully to handle system symlinks like /var -> /private/var
-    resolved = resolve_path(path_str)
+    resolved = resolve_path(path_str, base_dir=base_dir)
     project_resolved = project_root.resolve()
 
     # Check if resolved path is within project
@@ -129,7 +134,7 @@ def is_symlink_escape(path_str: str, project_root: Path) -> bool:
 
     original = Path(os.path.expandvars(os.path.expanduser(path_str)))
     if not original.is_absolute():
-        original = Path.cwd() / original
+        original = (base_dir or Path.cwd()) / original
 
     # Normalize without resolving symlinks
     original_normalized = Path(os.path.normpath(original))

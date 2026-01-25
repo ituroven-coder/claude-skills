@@ -63,10 +63,11 @@ class DirectoryCheck(SecurityCheck):
         Returns:
             CheckResult indicating if access is allowed.
         """
-        resolved = resolve_path(path)
+        # Resolve path relative to project root (not cwd, which may be security-guardian dir)
+        resolved = resolve_path(path, base_dir=self.project_root)
 
         # Check for symlink escape
-        if is_symlink_escape(path, self.project_root):
+        if is_symlink_escape(path, self.project_root, base_dir=self.project_root):
             return self._block(
                 reason=f"Symlink escape detected: '{path}' resolves to '{resolved}' outside project",
                 guidance=(
