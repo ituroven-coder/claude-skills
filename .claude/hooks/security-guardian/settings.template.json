@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run \"$CLAUDE_PROJECT_DIR/.claude/hooks/security-guardian/main.py\" 2>/dev/null || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/security-guardian/main.py\"",
+            "command": "cd \"$CLAUDE_PROJECT_DIR/.claude/hooks/security-guardian\" && uv run main.py 2>/dev/null || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/security-guardian/main.py\"",
             "timeout": 10000
           }
         ]
