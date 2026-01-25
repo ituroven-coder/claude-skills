@@ -143,12 +143,12 @@ def main():
             f"[{result.status.value.upper()}] {tool_name}: {result.reason}"
         )
 
-    # Output result
+    # Output result to stderr (Claude Code expects error messages there)
     if result.is_blocked:
-        print(format_block_message(result))
+        print(format_block_message(result), file=sys.stderr)
         sys.exit(2)
     elif result.needs_confirmation:
-        print(format_confirm_message(result))
+        print(format_confirm_message(result), file=sys.stderr)
         sys.exit(2)
     else:
         # Allow - exit 0 with no output
