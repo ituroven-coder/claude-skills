@@ -67,6 +67,33 @@ class ProtectedPathsConfig(BaseModel):
     no_read_content: list[str] = Field(default_factory=list)
 
 
+class CodePattern(BaseModel):
+    """Code pattern for sensitive file detection."""
+
+    pattern: str
+    description: str = ""
+
+
+class SensitiveFilesConfig(BaseModel):
+    """Sensitive files configuration."""
+
+    forbidden_read: list[str] = Field(default_factory=list)
+    code_patterns: list[CodePattern] = Field(default_factory=list)
+    secret_env_vars: list[str] = Field(default_factory=list)
+    custom_patterns: list[CodePattern] = Field(default_factory=list)
+
+
+class DangerousOperationsConfig(BaseModel):
+    """Dangerous operations patterns for exfiltration detection."""
+
+    network: list[str] = Field(default_factory=list)
+    sensitive_access: list[str] = Field(default_factory=list)
+    secret_scanning: list[str] = Field(default_factory=list)
+    system_recon: list[str] = Field(default_factory=list)
+    dynamic_execution: list[str] = Field(default_factory=list)
+    shell_execution: list[str] = Field(default_factory=list)
+
+
 class LoggingConfig(BaseModel):
     """Logging configuration."""
 
@@ -93,6 +120,10 @@ class SecurityConfig(BaseModel):
         default_factory=UnpackProtectionConfig
     )
     protected_paths: ProtectedPathsConfig = Field(default_factory=ProtectedPathsConfig)
+    sensitive_files: SensitiveFilesConfig = Field(default_factory=SensitiveFilesConfig)
+    dangerous_operations: DangerousOperationsConfig = Field(
+        default_factory=DangerousOperationsConfig
+    )
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 

@@ -3,6 +3,7 @@
 import pytest
 
 from checks.deletion_check import DeletionCheck
+from checks.base import PermissionDecision
 from config import SecurityConfig
 from parsers.bash_parser import parse_bash_command
 
@@ -16,19 +17,21 @@ def deletion_check(temp_project_dir, config):
 class TestDeletionCheck:
     """Tests for DeletionCheck."""
 
-    def test_rm_outside_project_blocked(self, deletion_check):
-        """Test that rm outside project is blocked."""
+    def test_rm_outside_project_asks(self, deletion_check):
+        """Test that rm outside project requires confirmation."""
         cmd = "rm /home/user/file.txt"
         parsed = parse_bash_command(cmd)
         result = deletion_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
-    def test_rm_rf_outside_project_blocked(self, deletion_check):
-        """Test that rm -rf outside project is blocked."""
+    def test_rm_rf_outside_project_asks(self, deletion_check):
+        """Test that rm -rf outside project requires confirmation."""
         cmd = "rm -rf ~/Documents"
         parsed = parse_bash_command(cmd)
         result = deletion_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
     def test_rm_in_project_allowed(self, deletion_check, temp_project_dir):
         """Test that rm in project is allowed."""
@@ -50,25 +53,28 @@ class TestDeletionCheck:
         result = deletion_check.check_command(cmd, parsed)
         assert result.is_allowed
 
-    def test_rm_git_directory_blocked(self, deletion_check, temp_project_dir):
-        """Test that rm -rf .git is blocked."""
+    def test_rm_git_directory_asks(self, deletion_check, temp_project_dir):
+        """Test that rm -rf .git requires confirmation."""
         git_dir = temp_project_dir / ".git"
 
         cmd = f"rm -rf {git_dir}"
         parsed = parse_bash_command(cmd)
         result = deletion_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
-    def test_rm_project_root_blocked(self, deletion_check, temp_project_dir):
-        """Test that rm -rf project root is blocked."""
+    def test_rm_project_root_asks(self, deletion_check, temp_project_dir):
+        """Test that rm -rf project root requires confirmation."""
         cmd = f"rm -rf {temp_project_dir}"
         parsed = parse_bash_command(cmd)
         result = deletion_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK
 
-    def test_unlink_outside_blocked(self, deletion_check):
-        """Test that unlink outside project is blocked."""
+    def test_unlink_outside_asks(self, deletion_check):
+        """Test that unlink outside project requires confirmation."""
         cmd = "unlink /etc/important.conf"
         parsed = parse_bash_command(cmd)
         result = deletion_check.check_command(cmd, parsed)
-        assert result.is_blocked
+        assert not result.is_allowed
+        assert result.permission_decision == PermissionDecision.ASK

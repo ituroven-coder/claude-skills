@@ -43,16 +43,27 @@ class UnpackCheck(SecurityCheck):
         self.project_root = get_project_root()
         self.allowed_paths = config.directories.allowed_paths
 
+    # Patterns that are security bypasses and should be hard denied
+    SECURITY_BYPASS_PATTERNS = ["bsdtar -s"]
+
     def check_command(
         self,
         raw_command: str,
         parsed_commands: list[ParsedCommand],
     ) -> CheckResult:
         """Check unpack commands for safety."""
-        # Check for blocked patterns in raw command
+        # Check for security bypass patterns first - DENY (no confirmation)
+        for pattern in self.SECURITY_BYPASS_PATTERNS:
+            if pattern in raw_command:
+                return self._deny(
+                    reason=f"Security bypass pattern: {pattern}",
+                    guidance=f"{pattern} can bypass path protection. Not allowed.",
+                )
+
+        # Check for blocked patterns in raw command - ASK (user can confirm)
         for pattern in self.config.unpack_protection.blocked_patterns:
             if pattern in raw_command:
-                return self._block(
+                return self._ask(
                     reason=f"Blocked unpack pattern: {pattern}",
                     guidance=f"Unpack to allowed directory only. Give user: `{raw_command}`",
                 )
@@ -78,28 +89,28 @@ class UnpackCheck(SecurityCheck):
         target_dir = self._extract_target_directory(cmd)
 
         if target_dir:
-            # Check if target is outside project
+            # Check if target is outside project - ASK (user can confirm)
             resolved = resolve_path(target_dir)
             if not is_path_within_allowed(
                 resolved, self.project_root, self.allowed_paths
             ):
-                return self._block(
+                return self._ask(
                     reason=f"Unpack target outside project: {target_dir}",
                     guidance=f"Cannot unpack outside project. Give user: `{raw_command}`",
                 )
 
-            # Check for path traversal
+            # Check for path traversal - DENY (security bypass)
             if check_archive_path_traversal(target_dir):
-                return self._block(
+                return self._deny(
                     reason=f"Path traversal in unpack target: {target_dir}",
-                    guidance="Path traversal detected. Give user the command.",
+                    guidance="Path traversal detected. This is a security bypass.",
                 )
 
-        # Check bsdtar -s (renaming can bypass protection)
+        # Check bsdtar -s (renaming can bypass protection) - DENY
         if cmd.command == "bsdtar" and "-s" in cmd.flags:
-            return self._block(
+            return self._deny(
                 reason="bsdtar -s (substitution) can bypass path protection",
-                guidance="bsdtar -s is blocked. Give user the command.",
+                guidance="bsdtar -s is blocked as it can bypass security.",
             )
 
         return self._allow()
@@ -154,7 +165,7 @@ class UnpackCheck(SecurityCheck):
                 if not is_path_within_allowed(
                     resolved, self.project_root, self.allowed_paths
                 ):
-                    return self._block(
+                    return self._ask(
                         reason=f"Python unpack target outside project: {target_dir}",
                         guidance=f"Cannot unpack outside project. Give user: `{raw_command}`",
                     )

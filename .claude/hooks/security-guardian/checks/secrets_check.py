@@ -42,7 +42,8 @@ class SecretsCheck(SecurityCheck):
         Returns:
             CheckResult indicating if access is allowed.
         """
-        resolved = resolve_path(path)
+        # Resolve relative to project root, not cwd (which may be security-guardian dir)
+        resolved = resolve_path(path, base_dir=self.project_root)
 
         # Get relative path to project
         try:
@@ -55,13 +56,15 @@ class SecretsCheck(SecurityCheck):
         # Check no_read_content patterns
         if self._is_write_operation(operation):
             if self._matches_no_modify(rel_str):
-                return self._block(
+                # Protected files - DENY (no confirmation possible)
+                return self._deny(
                     reason=f"Cannot modify protected file: {path}",
                     guidance=f"File is protected. Cannot modify {path}.",
                 )
         else:
             if self._matches_no_read(rel_str):
-                return self._block(
+                # Secrets files - DENY (no confirmation possible)
+                return self._deny(
                     reason=f"Cannot read secrets file: {path}",
                     guidance=self._get_secrets_guidance(path, rel_str),
                 )

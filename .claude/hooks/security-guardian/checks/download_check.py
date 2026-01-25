@@ -23,16 +23,22 @@ class DownloadCheck(SecurityCheck):
         self.project_root = get_project_root()
         self._downloaded_files: Optional[dict] = None
 
+    # Scripts that will be checked by CodeContentCheck on execution
+    SCRIPT_EXTENSIONS = {".py", ".sh", ".bash", ".rb", ".pl", ".js"}
+
+    # Binary executables that can't be content-checked
+    BINARY_EXTENSIONS = {".exe", ".app", ".dmg", ".pkg", ".deb", ".bin", ".msi"}
+
     def check_command(
         self,
         raw_command: str,
         parsed_commands: list[ParsedCommand],
     ) -> CheckResult:
         """Check download commands for safety."""
-        # First check for pipe to shell (always blocked)
+        # First check for pipe to shell (always HARD DENY)
         shell_targets = self.config.bypass_prevention.block_shell_pipe_targets
         if is_pipe_to_shell(parsed_commands, shell_targets):
-            return self._block(
+            return self._deny(
                 reason="Downloading and piping to shell detected",
                 guidance="Cannot pipe downloads to shell. Download file, review, then run.",
             )
@@ -57,17 +63,27 @@ class DownloadCheck(SecurityCheck):
         # Get file extension from URL or output path
         extension = self._get_extension(url, output_path)
 
-        # Check if extension requires user download
-        require_user = self.config.download_protection.require_user_download
-        if extension and any(ext for ext in require_user if extension.endswith(ext)):
-            output_info = f" to {output_path}" if output_path else ""
-            return self._block(
-                reason=f"Download of executable file blocked: *{extension}",
-                guidance=(
-                    f"Cannot download executable files. "
-                    f"Give user the command: `{cmd.command} {' '.join(cmd.flags)} {' '.join(cmd.args)}`"
-                ),
-            )
+        # Scripts (.py, .sh, etc.) - ALLOW
+        # They will be checked by CodeContentCheck when executed
+        if extension:
+            for script_ext in self.SCRIPT_EXTENSIONS:
+                if extension.endswith(script_ext):
+                    # Track for execution check
+                    if self.config.download_protection.track_downloaded_executables:
+                        self._track_downloaded_file(url, output_path)
+                    return self._allow()
+
+        # Binary executables - ASK (can't content-check them)
+        if extension:
+            for binary_ext in self.BINARY_EXTENSIONS:
+                if extension.endswith(binary_ext):
+                    return self._ask(
+                        reason=f"Download of binary executable: *{extension}",
+                        guidance=(
+                            f"Binary files cannot be content-checked. "
+                            f"Give user the command: `{cmd.command} {' '.join(cmd.flags)} {' '.join(cmd.args)}`"
+                        ),
+                    )
 
         # Auto-download data files are allowed
         auto_download = self.config.download_protection.auto_download
