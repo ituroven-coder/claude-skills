@@ -1,3 +1,10 @@
 token.txt
 .DS_Store
 .claude/settings*
+
+# Security Guardian
+.claude/hooks/security-guardian/.downloaded.json
+.claude/hooks/security-guardian/__pycache__/
+.claude/hooks/security-guardian/**/__pycache__/
+.claude/hooks/security-guardian/.venv/
+.claude/hooks/security-guardian/.pytest_cache/

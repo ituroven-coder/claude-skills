@@ -1,0 +1,26 @@
+[project]
+name = "security-guardian"
+version = "1.0.0"
+description = "Security hooks for Claude Code to prevent dangerous operations"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "bashlex>=0.18",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=4.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+pythonpath = ["."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["config", "parsers", "checks", "handlers", "messages"]

@@ -1,0 +1,220 @@
+# Security Guardian Configuration
+# ================================
+# Main protection: directory boundaries > path patterns
+
+# Directory boundaries (PRIMARY PROTECTION)
+directories:
+  # Project root is auto-detected (by .git or cwd)
+  project_root: null  # auto-detect
+
+  # Additional allowed directories (user can add here)
+  allowed_paths: []
+  # Examples:
+  # - "${HOME}/Documents/shared-libs"
+  # - "/tmp/claude"
+
+# Destructive git operations
+git:
+  # Completely blocked
+  hard_blocked:
+    - "push --force"          # but --force-with-lease is allowed
+
+  # Requires confirmation (provide command to user)
+  confirm_required:
+    - "push -f"               # suggest --force-with-lease
+    - "reset --hard"          # suggest stash
+    - "branch -D"             # give command
+    - "clean -fd"             # give command (but --dry-run allowed)
+    - "reflog expire"         # give command
+
+  # Allowed without confirmation
+  allowed:
+    - "push --force-with-lease"
+    - "clean -fd --dry-run"   # safe preview
+    - "clean -fdn"            # same (n = dry-run)
+
+  # Auto-allow in CI (check CI=true / GITHUB_ACTIONS / GITLAB_CI)
+  ci_auto_allow:
+    - "clean -fd"             # for pipelines
+    - "reset --hard"          # fresh checkout in CI
+
+# Bypass prevention (refined rules)
+bypass_prevention:
+  # Block only if target is outside project
+  blocked_outside_project:
+    - "base64 -d"       # allowed inside project
+    - "xxd -r"
+
+  # Completely blocked
+  hard_blocked:
+    - "eval"            # too dangerous
+
+  # Block $VAR only as COMMAND, not in arguments
+  # Bad: $cmd file    Good: echo $VAR, VAR=$(cmd)
+  block_variable_as_command: true
+
+  # Block pipe to shell AND direct invocation with -c
+  block_shell_pipe_targets:
+    - "sh"
+    - "bash"
+    - "zsh"
+    - "fish"
+
+  # Block shell -c (all shell variants)
+  block_shell_exec_patterns:
+    - "sh -c"
+    - "bash -c"
+    - "zsh -c"
+    - "dash -c"
+    - "ksh -c"
+    - "ash -c"
+    - "busybox sh"
+    - "env -i bash"
+    - "env -i sh"
+
+  # Interpreters with network calls - CONFIRM, not hard block
+  # (string patterns may have false positives)
+  confirm_interpreter_inline_with_network:
+    - "python -c"
+    - "python3 -c"
+    - "perl -e"
+    - "node -e"
+    - "ruby -e"
+
+  # Network call patterns (check in import/require context)
+  network_patterns:
+    - "import requests"
+    - "import urllib"
+    - "import http.client"
+    - "import socket"
+    - "import httpx"
+    - "import aiohttp"
+    - "require('http')"
+    - "fetch("
+
+  # Import obfuscation
+  obfuscation_patterns:
+    - "importlib.import_module"
+    - "__import__"
+
+  # RCE via decode+exec - confirm only if ALSO has network module
+  # Otherwise too many false positives on legitimate code
+  rce_patterns_require_network:
+    - "exec(base64"
+    - "exec(bytes.fromhex"
+    - "eval(base64"
+
+# Download protection
+download_protection:
+  # Scripts and binaries require user command
+  require_user_download:
+    - ".py"
+    - ".sh"
+    - ".bash"
+    - ".rb"
+    - ".pl"
+    - ".js"
+    - ".exe"
+    - ".app"
+    - ".dmg"
+    - ".pkg"
+    - ".deb"
+    - ".bin"
+    - ".msi"
+
+  # Archives can be downloaded, but UnpackCheck controls extraction
+  # This removes double friction
+  auto_download_but_check_unpack:
+    - ".tar.gz"
+    - ".tgz"
+    - ".zip"
+    - ".rar"
+    - ".7z"
+    - ".tar.bz2"
+    - ".tar.xz"
+
+  # Data can be downloaded without restrictions
+  auto_download:
+    - ".json"
+    - ".yaml"
+    - ".yml"
+    - ".txt"
+    - ".csv"
+    - ".md"
+    - ".xml"
+    - ".html"
+
+  # pipe to shell always blocked
+  block_pipe_to_shell: true
+
+  # Track downloaded executables metadata
+  track_downloaded_executables: true
+
+  # Store in project (won't be lost when cleaning HOME)
+  # IMPORTANT: add to .gitignore and exclude from no_modify
+  downloaded_files_metadata: ".claude/hooks/security-guardian/.downloaded.json"
+
+  # Check file type via `file` command (ELF/PE/Mach-O/shebang)
+  # Binary without extension or .dat will be marked as executable
+  detect_binary_by_magic: true
+
+  # Exception: files under git control in allowed_paths
+  # chmod +x on git-tracked file -> ALLOW (check via git ls-files)
+  git_tracked_allow: true
+
+  # Fallback if `file` command unavailable (Windows/macOS without coreutils)
+  # Use py-magic or read first bytes (shebang/ELF/PE magic)
+  file_command_fallback: true
+
+# Archive unpacking
+unpack_protection:
+  # Check realpath of each extracted file
+  check_extracted_files: true
+
+  # Normalize names from archive (protect from path traversal)
+  check_archive_path_traversal: true
+
+  # Blocked unpack patterns
+  blocked_patterns:
+    - "tar -C ../"
+    - "tar --directory=../"
+    - "tar --one-top-level=../"
+    - "unzip -d ../"
+    - "bsdtar -C ../"
+    - "bsdtar -s"             # renaming can bypass protection
+    - "python -m zipfile -e"  # unpacking via Python
+    - "python3 -m zipfile -e"
+
+# Protected paths INSIDE project (additional layer)
+protected_paths:
+  no_modify:
+    - ".git/**"
+    - ".claude/settings.json"
+    - ".claude/settings.local.json"
+    # Self-edit protection (disabling protection)
+    - ".claude/hooks/security-guardian/main.py"
+    - ".claude/hooks/security-guardian/pyproject.toml"
+    - ".claude/hooks/security-guardian/config/**"
+    - ".claude/hooks/security-guardian/checks/**"
+    - ".claude/hooks/security-guardian/handlers/**"
+    - ".claude/hooks/security-guardian/parsers/**"
+    - ".claude/hooks/security-guardian/messages/**"
+    # Do NOT include .downloaded.json - hook needs to update it
+
+  no_read_content:  # but can see file exists
+    - "**/.env"
+    - "**/.env.*"
+    - "!**/.env.example"
+    - "!**/.env.template"
+
+# Logging
+logging:
+  enabled: true
+  log_blocked: true
+  log_directory: "${HOME}/.claude/logs/security-guardian"
+  # IMPORTANT: logs contain only metadata (command, path, block reason)
+  # Do NOT contain file content
+  log_content: false
+  # Log rotation
+  max_log_size_mb: 10
+  max_log_files: 5  # keep last 5 files
