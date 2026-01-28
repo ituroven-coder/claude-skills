@@ -1,0 +1,91 @@
+name: Release Security Guardian
+
+on:
+  push:
+    tags:
+      - 'guardian-v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          cd .claude/hooks/security-guardian-go
+          go build -ldflags="-s -w" -o guardian-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/guardian
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: guardian-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: .claude/hooks/security-guardian-go/guardian-${{ matrix.goos }}-${{ matrix.goarch }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: ls -R artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Security Guardian ${{ github.ref_name }}
+          body: |
+            Security Guardian Go - Native binary for Claude Code security hooks.
+
+            ## Installation
+
+            Download the appropriate binary for your platform:
+            - **macOS ARM (M1/M2/M3)**: `guardian-darwin-arm64`
+            - **macOS Intel**: `guardian-darwin-amd64`
+            - **Linux x64**: `guardian-linux-amd64`
+
+            Or use the install script:
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/artwist-polyakov/polyakov-claude-skills/main/.claude/hooks/security-guardian-go/scripts/install.sh | bash
+            ```
+
+            ## Performance
+            - Cold start: ~10-20ms
+            - Single binary, no dependencies
+          files: |
+            artifacts/guardian-darwin-arm64/guardian-darwin-arm64
+            artifacts/guardian-darwin-amd64/guardian-darwin-amd64
+            artifacts/guardian-linux-amd64/guardian-linux-amd64

@@ -1,0 +1,8 @@
+# Compiled binaries (build locally or download from Releases)
+bin/
+guardian
+guardian-*
+
+# Test artifacts
+*.test
+coverage.out
