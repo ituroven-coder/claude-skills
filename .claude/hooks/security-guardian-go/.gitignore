@@ -2,7 +2,27 @@
 bin/
 guardian
 guardian-*
+*.exe
 
 # Test artifacts
 *.test
 coverage.out
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+
+# Logs (logs go to ~/.claude/logs/security-guardian/)
+*.log

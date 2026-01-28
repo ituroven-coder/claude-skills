@@ -2,6 +2,59 @@
 
 High-performance security hooks for Claude Code, written in Go for maximum speed and minimal footprint.
 
+---
+
+## Быстрый старт (Quick Start)
+
+### Шаг 1: Скопировать в свой проект
+
+```bash
+# Создать структуру директорий
+mkdir -p /path/to/your/project/.claude/hooks
+
+# Скопировать security-guardian-go
+cp -r .claude/hooks/security-guardian-go /path/to/your/project/.claude/hooks/
+```
+
+### Шаг 2: Собрать бинарник
+
+```bash
+cd /path/to/your/project/.claude/hooks/security-guardian-go
+go build -o bin/guardian ./cmd/guardian
+```
+
+### Шаг 3: Создать settings.json
+
+Создать файл `/path/to/your/project/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Bash|Read|Write|Edit|Glob|Grep|NotebookEdit",
+      "hooks": [{
+        "type": "command",
+        "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/security-guardian-go/bin/guardian\"",
+        "timeout": 5000
+      }]
+    }]
+  }
+}
+```
+
+### Шаг 4: Добавить в .gitignore проекта
+
+```gitignore
+# Security Guardian binary (build locally)
+.claude/hooks/security-guardian-go/bin/
+```
+
+### Готово!
+
+Теперь при запуске Claude Code в этом проекте все опасные команды будут проверяться guardian'ом.
+
+---
+
 ## Features
 
 - **Fast Cold Start**: ~10-20ms startup time (vs ~300-500ms for Python)
