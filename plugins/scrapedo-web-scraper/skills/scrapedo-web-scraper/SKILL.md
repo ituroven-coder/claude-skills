@@ -1,6 +1,9 @@
 ---
 name: scrapedo-web-scraper
-description: Веб-скрапинг через Scrape.do. Используй, если не получается посмотреть какой-то сайт (URL).
+description: |
+  Веб-скрапинг через Scrape.do. Обходит блокировки и CAPTCHA.
+  АВТОМАТИЧЕСКИ используй при ошибках WebFetch: 403, 401, 429,
+  timeout, access denied, Cloudflare block.
 ---
 
 # Scrape.do Web Scraper
