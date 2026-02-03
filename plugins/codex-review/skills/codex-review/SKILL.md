@@ -2,10 +2,9 @@
 name: codex-review
 description: |
   Workflow кросс-агентного ревью с Codex.
-  Triggers (RU): "workflow с codex ревьювером", "codex review workflow",
-  "отправь на ревью в codex", "запусти codex ревью".
-  Triggers (EN): "use codex review workflow", "start codex review",
-  "send to codex for review".
+  Triggers (RU): "кодекс ревью".
+  Triggers (EN): "with codex review", "codex review workflow",
+  "start codex review".
 ---
 
 # Codex Review Workflow
