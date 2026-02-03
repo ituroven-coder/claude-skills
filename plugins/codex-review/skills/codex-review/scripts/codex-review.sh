@@ -260,7 +260,7 @@ Instructions:
         --model "$CODEX_MODEL" \
         -c "model_reasoning_effort=\"$CODEX_REASONING_EFFORT\"" \
         $(build_yolo_flag) \
-        resume --session "$SESSION_ID" \
+        resume "$SESSION_ID" \
         "$codex_prompt" 2>&1) || {
         local exit_code=$?
         echo "ERROR: Codex exec failed (exit $exit_code)." >&2
