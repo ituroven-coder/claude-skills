@@ -5,11 +5,20 @@ description: |
   Triggers (RU): "кодекс ревью".
   Triggers (EN): "with codex review", "codex review workflow",
   "start codex review".
+  ВАЖНО: при срабатывании триггера прочитай SKILL.md до любых других шагов.
 ---
 
 # Codex Review Workflow
 
 Кросс-агентное ревью: Claude реализует, Codex (GPT) ревьюит. Codex работает в той же директории и может самостоятельно смотреть код.
+
+## Расположение скриптов
+
+Скрипты лежат в `scripts/` рядом с этим SKILL.md. Определи полный путь:
+- Этот файл: путь из которого ты прочитал SKILL.md
+- Скрипты: замени `SKILL.md` на `scripts/codex-review.sh` (и `scripts/codex-state.sh`)
+
+Все команды ниже используют относительный `scripts/` — подставь полный путь при вызове.
 
 ## Workflow
 
