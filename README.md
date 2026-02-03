@@ -17,6 +17,7 @@
 /plugin install genome-analizer
 /plugin install ssh-remote-connection
 /plugin install yandex-wordstat
+/plugin install codex-review
 ```
 
 ### Ручная установка (без маркетплейса)
@@ -156,6 +157,24 @@ SSH подключение к удалённым серверам с agent forwa
 
 ---
 
+### [codex-review](plugins/codex-review/skills/codex-review)
+
+Кросс-агентное ревью: Claude реализует, Codex (GPT-5.2) ревьюит.
+
+- Workflow: init session → plan review → implementation → code review
+- Журнал ревью в `.codex-review/notes/` (коммитится в git)
+- Анти-рекурсия через env guard `CODEX_REVIEWER`
+
+**Триггеры (RU):**
+- "кодекс ревью"
+
+**Триггеры (EN):**
+- "with codex review"
+- "codex review workflow"
+- "start codex review"
+
+---
+
 ## Структура репозитория
 
 ```
@@ -168,7 +187,8 @@ polyakov-claude-skills/
 │   ├── agent-deck/           # Плагин для агентов
 │   ├── genome-analizer/      # Плагин для анализа генома
 │   ├── ssh-remote-connection/# Плагин для SSH
-│   └── yandex-wordstat/      # Плагин для Wordstat API
+│   ├── yandex-wordstat/      # Плагин для Wordstat API
+│   └── codex-review/         # Плагин для кросс-агентного ревью
 └── README.md
 ```
 
