@@ -36,6 +36,12 @@
       "description": "SSH подключение к удалённым серверам с agent forwarding",
       "source": "./plugins/ssh-remote-connection",
       "category": "development"
+    },
+    {
+      "name": "codex-review",
+      "description": "Cross-agent review workflow: Claude implements, Codex reviews",
+      "source": "./plugins/codex-review",
+      "category": "development"
     }
   ]
 }
