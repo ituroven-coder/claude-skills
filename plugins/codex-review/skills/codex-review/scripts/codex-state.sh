@@ -32,7 +32,7 @@ cmd_reset() {
         echo "Full reset complete."
     else
         local session_id task_desc
-        session_id="$(read_state_field "session_id")"
+        session_id="$(get_effective_session_id)"
         task_desc="$(read_state_field "task_description")"
         write_state "{
   \"session_id\": \"$session_id\",

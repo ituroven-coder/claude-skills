@@ -148,6 +148,12 @@ print_result() {
 cmd_init() {
     local prompt="$DESCRIPTION"
 
+    # Warn if config.env already has a session
+    if [[ -n "${CODEX_SESSION_ID:-}" ]]; then
+        echo "WARNING: CODEX_SESSION_ID is already set in config.env: $CODEX_SESSION_ID" >&2
+        echo "Init will create a NEW session. Update config.env afterwards or remove CODEX_SESSION_ID to use state.json." >&2
+    fi
+
     echo "Creating Codex session..." >&2
 
     local output
