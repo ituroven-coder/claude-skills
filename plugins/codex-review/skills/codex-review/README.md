@@ -71,7 +71,7 @@ npm install -g @openai/codex
 Создай `.codex-review/config.env` в корне проекта:
 
 ```bash
-CODEX_MODEL=o4-mini
+CODEX_MODEL=gpt-5.2
 CODEX_REASONING_EFFORT=high
 CODEX_MAX_ITERATIONS=3
 CODEX_YOLO=true
