@@ -5,6 +5,7 @@ description: |
   Triggers (RU): "кодекс ревью".
   Triggers (EN): "with codex review", "codex review workflow",
   "start codex review".
+  ВАЖНО: при срабатывании триггера прочитай SKILL.md до любых других шагов.
 ---
 
 # Codex Review Workflow
