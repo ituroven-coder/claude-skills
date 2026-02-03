@@ -83,7 +83,7 @@ save_note() {
     local content="$3"
     local note_file="$STATE_DIR/notes/${phase}-review-${iteration}.md"
     {
-        echo "# ${phase^} Review #${iteration}"
+        echo "# $(echo "$phase" | awk '{print toupper(substr($0,1,1)) substr($0,2)}') Review #${iteration}"
         echo "Date: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
         echo ""
         echo "$content"
