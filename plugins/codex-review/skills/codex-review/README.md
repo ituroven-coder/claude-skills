@@ -71,27 +71,28 @@ npm install -g @openai/codex
 Создай `.codex-review/config.env` в корне проекта:
 
 ```bash
+# Существующая сессия Codex (или используй init для создания новой)
+# CODEX_SESSION_ID=sess_your_session_id
+
 CODEX_MODEL=gpt-5.2
 CODEX_REASONING_EFFORT=high
 CODEX_MAX_ITERATIONS=3
 CODEX_YOLO=true
 ```
 
-См. `config/defaults.env.example` для всех параметров.
-
 ## Использование
 
 ### Подключение существующей сессии Codex
 
-Если у вас уже есть живая сессия с Codex (например, вы обсуждали архитектуру проекта), подключите её:
+Если у вас уже есть живая сессия с Codex (например, вы обсуждали архитектуру), впишите её id в `.codex-review/config.env`:
 
 ```bash
-# Узнать session_id существующей сессии:
-codex session list
-
-# Установить в плагин:
-bash scripts/codex-state.sh set session_id sess_ваш_id
+CODEX_SESSION_ID=sess_ваш_id
 ```
+
+Узнать id: `codex session list`
+
+Альтернативно — через CLI: `bash scripts/codex-state.sh set session_id sess_ваш_id`
 
 После этого команды `plan` и `code` будут отправлять ревью в эту сессию через `resume`.
 
