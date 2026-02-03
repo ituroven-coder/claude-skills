@@ -40,10 +40,10 @@ load_config() {
         source "$config_file"
     fi
 
-    export CODEX_MODEL="${CODEX_MODEL:-gpt-5.2}"
-    export CODEX_REASONING_EFFORT="${CODEX_REASONING_EFFORT:-high}"
-    export CODEX_MAX_ITERATIONS="${CODEX_MAX_ITERATIONS:-3}"
-    export CODEX_YOLO="${CODEX_YOLO:-true}"
+    CODEX_MODEL="${CODEX_MODEL:-gpt-5.2}"
+    CODEX_REASONING_EFFORT="${CODEX_REASONING_EFFORT:-high}"
+    CODEX_MAX_ITERATIONS="${CODEX_MAX_ITERATIONS:-3}"
+    CODEX_YOLO="${CODEX_YOLO:-true}"
 }
 
 # --- Read a field from state.json (no jq dependency) ---
