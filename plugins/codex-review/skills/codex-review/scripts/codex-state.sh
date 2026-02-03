@@ -12,10 +12,14 @@ STATE_DIR="$(get_state_dir)"
 STATE_FILE="$STATE_DIR/state.json"
 
 cmd_show() {
+    local effective_sid
+    effective_sid="$(get_effective_session_id)"
+
     if [[ -f "$STATE_FILE" ]]; then
-        cat "$STATE_FILE"
+        # Replace session_id in output with effective value (config.env takes priority)
+        sed "s|\"session_id\"[[:space:]]*:[[:space:]]*\"[^\"]*\"|\"session_id\": \"$effective_sid\"|" "$STATE_FILE"
     else
-        echo '{"session_id":"","phase":"","iteration":0,"max_iterations":3,"last_review_status":"","last_review_timestamp":"","task_description":""}'
+        echo "{\"session_id\":\"$effective_sid\",\"phase\":\"\",\"iteration\":0,\"max_iterations\":3,\"last_review_status\":\"\",\"last_review_timestamp\":\"\",\"task_description\":\"\"}"
     fi
 }
 
@@ -45,6 +49,10 @@ cmd_reset() {
 
 cmd_get() {
     local field="${1:?Usage: codex-state.sh get <field>}"
+    if [[ "$field" == "session_id" ]]; then
+        get_effective_session_id
+        return
+    fi
     local val
     val="$(read_state_field "$field")"
     if [[ -z "$val" ]]; then

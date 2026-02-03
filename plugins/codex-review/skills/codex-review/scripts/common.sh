@@ -83,6 +83,15 @@ read_state_number() {
     echo "${val:-0}"
 }
 
+# --- Effective session_id: config.env → state.json ---
+get_effective_session_id() {
+    local sid="${CODEX_SESSION_ID:-}"
+    if [[ -z "$sid" ]]; then
+        sid="$(read_state_field "session_id")"
+    fi
+    echo "$sid"
+}
+
 # --- Write state.json ---
 write_state() {
     local json="$1"
