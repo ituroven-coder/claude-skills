@@ -55,8 +55,7 @@ STATE_DIR="$(get_state_dir)"
 STATE_FILE="$STATE_DIR/state.json"
 
 MAX_ITERATIONS="${MAX_ITER:-$CODEX_MAX_ITERATIONS}"
-# Session priority: config.env (CODEX_SESSION_ID) → state.json
-SESSION_ID="${CODEX_SESSION_ID:-$(read_state_field "session_id")}"
+SESSION_ID="$(get_effective_session_id)"
 
 # --- Build yolo flags ---
 build_yolo_flag() {
@@ -148,6 +147,12 @@ print_result() {
 # =====================
 cmd_init() {
     local prompt="$DESCRIPTION"
+
+    # Warn if config.env already has a session
+    if [[ -n "${CODEX_SESSION_ID:-}" ]]; then
+        echo "WARNING: CODEX_SESSION_ID is already set in config.env: $CODEX_SESSION_ID" >&2
+        echo "Init will create a NEW session. Update config.env afterwards or remove CODEX_SESSION_ID to use state.json." >&2
+    fi
 
     echo "Creating Codex session..." >&2
 
