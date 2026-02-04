@@ -308,14 +308,16 @@ Focus areas:
 - Clarity: is the implementation strategy clear and unambiguous?
 - Readiness: is the plan specific enough to start coding — are there gaps, undefined decisions, or missing details that would block implementation?"
     else
-        phase_instructions="You are reviewing code changes.
+        phase_instructions="You are reviewing code changes against the previously approved plan.
 
 Focus areas:
-- Bugs, edge cases, off-by-one errors
-- Security vulnerabilities (injection, auth, data exposure)
-- Error handling and failure modes
-- Code readability and maintainability
-- Test coverage — are critical paths tested?"
+- Plan adherence: does the implementation match the approved plan? Note any deviations or missing parts
+- Correctness: bugs, edge cases, off-by-one errors
+- Security: injection, auth, data exposure vulnerabilities
+- Error handling: failure modes, missing validations
+- Code quality: readability, maintainability, naming, structure
+- Tests: are critical paths covered? Are tests meaningful, not just nominal?
+- Merge readiness: is this code ready to merge as-is, or are there blockers?"
     fi
 
     local codex_prompt="You are reviewing work by Claude Code on this project.
