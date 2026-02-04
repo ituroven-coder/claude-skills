@@ -301,11 +301,12 @@ cmd_review() {
         phase_instructions="You are reviewing a proposed implementation plan.
 
 Focus areas:
-- Does the approach solve the stated problem?
-- Are there architectural risks or better alternatives?
-- Is the scope appropriate — not too broad, not too narrow?
-- Are requirements and edge cases covered?
-- Is the chosen technology/pattern a good fit?"
+- Correctness: does the approach solve the stated problem?
+- Completeness: are requirements and edge cases covered?
+- Architecture: are there risks or better alternatives?
+- Scope: not too broad, not too narrow?
+- Clarity: is the implementation strategy clear and unambiguous?
+- Readiness: is the plan specific enough to start coding — are there gaps, undefined decisions, or missing details that would block implementation?"
     else
         phase_instructions="You are reviewing code changes.
 
