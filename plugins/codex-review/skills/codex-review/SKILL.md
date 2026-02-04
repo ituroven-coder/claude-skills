@@ -42,6 +42,14 @@ bash scripts/codex-review.sh init "Implement JWT authentication for API"
 
 Опиши ЧТО собираешься делать, КАКОЙ подход выбрал и ПОЧЕМУ.
 
+Если используешь plan mode — отправь план на ревью **перед** `ExitPlanMode`:
+1. Написал план в файл
+2. Отправь содержимое плана через `codex-review.sh plan`
+3. `CHANGES_REQUESTED` → скорректируй план, отправь снова
+4. `APPROVED` → вызови `ExitPlanMode` для одобрения пользователем
+
+Таким образом план проходит два ревью: техническое (Codex) и бизнес-приоритетное (пользователь).
+
 ```bash
 bash scripts/codex-review.sh plan "План: реализовать авторизацию через JWT. Подход: middleware проверяет токен, refresh через отдельный endpoint. Решение: выбрал JWT вместо session-based т.к. API stateless."
 ```
