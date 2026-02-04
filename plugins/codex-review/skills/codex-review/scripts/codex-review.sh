@@ -272,6 +272,24 @@ cmd_review() {
         exit 3
     fi
 
+    # Reset iteration counter on phase change (e.g. plan → code)
+    local previous_phase
+    previous_phase="$(read_state_field "phase")"
+    if [[ -n "$previous_phase" && "$previous_phase" != "$phase" ]]; then
+        local task_desc
+        task_desc="$(read_state_field "task_description")"
+        write_state "{
+  \"session_id\": \"$SESSION_ID\",
+  \"phase\": \"$previous_phase\",
+  \"iteration\": 0,
+  \"max_iterations\": $MAX_ITERATIONS,
+  \"last_review_status\": \"\",
+  \"last_review_timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\",
+  \"task_description\": \"$task_desc\"
+}"
+        echo "Phase changed ($previous_phase → $phase), iteration counter reset." >&2
+    fi
+
     # Check iteration limit
     local current_iteration
     current_iteration="$(read_state_number "iteration")"

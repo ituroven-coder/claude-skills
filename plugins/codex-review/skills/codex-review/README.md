@@ -93,7 +93,7 @@ npm install -g @openai/codex
 
 CODEX_MODEL=gpt-5.2
 CODEX_REASONING_EFFORT=high
-CODEX_MAX_ITERATIONS=3
+CODEX_MAX_ITERATIONS=5
 CODEX_YOLO=true
 
 # Custom reviewer prompt (optional, replaces built-in default)
