@@ -6,19 +6,33 @@
 
 ## Установка
 
-1. Добавь плагин в проект:
+### Вариант A: через marketplace (рекомендуется)
+
+1. Добавь репозиторий как marketplace (один раз):
 
 ```bash
-claude plugins add /path/to/polyakov-claude-skills/plugins/codex-review
+# Из локальной директории
+claude plugin marketplace add /path/to/polyakov-claude-skills
+
+# Или из GitHub
+claude plugin marketplace add github:artwist-polyakov/polyakov-claude-skills
 ```
 
-Или через marketplace:
+2. Установи плагин:
 
 ```bash
-claude plugins add codex-review --registry polyakov-claude-skills
+claude plugin install codex-review@polyakov-claude-skills
 ```
 
-2. Убедись, что `codex` CLI установлен:
+### Вариант B: для одной сессии
+
+```bash
+claude --plugin-dir /path/to/polyakov-claude-skills/plugins/codex-review
+```
+
+### Зависимости
+
+Убедись, что `codex` CLI установлен:
 
 ```bash
 npm install -g @openai/codex
