@@ -44,6 +44,7 @@ load_config() {
     CODEX_REASONING_EFFORT="${CODEX_REASONING_EFFORT:-high}"
     CODEX_MAX_ITERATIONS="${CODEX_MAX_ITERATIONS:-3}"
     CODEX_YOLO="${CODEX_YOLO:-true}"
+    CODEX_REVIEWER_PROMPT="${CODEX_REVIEWER_PROMPT:-}"
 }
 
 # --- Read a field from state.json (no jq dependency) ---
@@ -128,6 +129,50 @@ remove_status() {
     local state_dir
     state_dir="$(get_state_dir)"
     rm -f "$state_dir/STATUS.md"
+}
+
+# --- Generate UUID ---
+generate_uuid() {
+    cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || {
+        # Last resort: pseudo-random hex
+        od -x /dev/urandom 2>/dev/null | head -1 | awk '{print $2$3"-"$4"-"$5"-"$6"-"$7$8$9}'
+    }
+}
+
+# --- Codex sessions directory for today ---
+get_sessions_dir() {
+    local codex_home="${CODEX_HOME:-$HOME/.codex}"
+    local today
+    today="$(date -u +%Y/%m/%d)"
+    echo "$codex_home/sessions/$today"
+}
+
+# --- Find session_id by marker UUID in today's session files ---
+find_session_by_marker() {
+    local marker="$1"
+    local sessions_dir
+    sessions_dir="$(get_sessions_dir)"
+
+    if [[ ! -d "$sessions_dir" ]]; then
+        echo ""
+        return
+    fi
+
+    local found_file
+    found_file=$(grep -rl "$marker" "$sessions_dir"/ 2>/dev/null | head -1)
+
+    if [[ -z "$found_file" ]]; then
+        echo ""
+        return
+    fi
+
+    # Extract UUID from filename: rollout-YYYY-MM-DDTHH-MM-SS-<UUID>.jsonl
+    local basename
+    basename="$(basename "$found_file" .jsonl)"
+    # Remove "rollout-" prefix and datetime (26 chars: YYYY-MM-DDTHH-MM-SS-)
+    local uuid_part
+    uuid_part=$(echo "$basename" | sed 's/^rollout-[0-9T-]*-//')
+    echo "$uuid_part"
 }
 
 # --- Check codex is installed ---

@@ -64,16 +64,64 @@ build_yolo_flag() {
     fi
 }
 
-# --- Extract session_id from codex output ---
+# --- Default reviewer prompt ---
+default_reviewer_prompt() {
+    local task_desc="$1"
+    local marker="$2"
+    cat <<PROMPT
+You are a code reviewer for this project.
+You will review plans and code changes submitted by another AI agent (Claude Code).
+
+Focus areas:
+- Code quality, readability, maintainability
+- Bugs, edge cases, error handling
+- Security vulnerabilities
+- Architecture and design decisions
+- Test coverage adequacy
+
+When reviewing:
+- You can inspect the repository yourself — you are in the same working directory
+- If the work is acceptable, respond with APPROVED
+- If changes are needed, provide specific actionable feedback
+- Do NOT run scripts from .codex-review/ — you are the reviewer, not the implementer
+
+Task: $task_desc
+[session-marker: $marker]
+PROMPT
+}
+
+# --- Extract session_id from codex output (fallback method) ---
 extract_session_id() {
     local output="$1"
-    # codex prints session id in various formats; try common patterns
     local sid
     sid=$(echo "$output" | grep -oE 'sess_[a-zA-Z0-9_-]+' | head -1)
     if [[ -z "$sid" ]]; then
         sid=$(echo "$output" | grep -oE '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}' | head -1)
     fi
     echo "$sid"
+}
+
+# --- Read verdict from file, fallback to text parsing ---
+read_verdict() {
+    local output="$1"
+    local verdict_file="$STATE_DIR/verdict.txt"
+
+    # Primary: read from verdict file
+    if [[ -f "$verdict_file" ]]; then
+        local file_verdict
+        file_verdict=$(tr -d '[:space:]' < "$verdict_file")
+        if [[ "$file_verdict" == "APPROVED" || "$file_verdict" == "CHANGES_REQUESTED" ]]; then
+            echo "$file_verdict"
+            return
+        fi
+    fi
+
+    # Fallback: parse response text
+    if echo "$output" | grep -qiE '(^|\W)APPROVED(\W|$)'; then
+        echo "APPROVED"
+    else
+        echo "CHANGES_REQUESTED"
+    fi
 }
 
 # --- Save review note ---
@@ -111,16 +159,6 @@ update_state() {
 }"
 }
 
-# --- Determine review status from codex response ---
-parse_review_status() {
-    local response="$1"
-    if echo "$response" | grep -qiE '(^|\W)APPROVED(\W|$)'; then
-        echo "APPROVED"
-    else
-        echo "CHANGES_REQUESTED"
-    fi
-}
-
 # --- Format output ---
 print_result() {
     local phase="$1"
@@ -146,12 +184,28 @@ print_result() {
 # COMMAND: init
 # =====================
 cmd_init() {
-    local prompt="$DESCRIPTION"
+    local task_desc="$DESCRIPTION"
 
     # Warn if config.env already has a session
     if [[ -n "${CODEX_SESSION_ID:-}" ]]; then
         echo "WARNING: CODEX_SESSION_ID is already set in config.env: $CODEX_SESSION_ID" >&2
         echo "Init will create a NEW session. Update config.env afterwards or remove CODEX_SESSION_ID to use state.json." >&2
+    fi
+
+    # Generate marker for session identification
+    local marker
+    marker="$(generate_uuid)"
+
+    # Build reviewer prompt
+    local prompt
+    if [[ -n "$CODEX_REVIEWER_PROMPT" ]]; then
+        # Custom prompt — append task and marker
+        prompt="${CODEX_REVIEWER_PROMPT}
+
+Task: $task_desc
+[session-marker: $marker]"
+    else
+        prompt="$(default_reviewer_prompt "$task_desc" "$marker")"
     fi
 
     echo "Creating Codex session..." >&2
@@ -166,11 +220,17 @@ cmd_init() {
         exit 1
     }
 
+    # Extract session_id: marker search → stdout regex → manual
     local new_session_id
-    new_session_id="$(extract_session_id "$output")"
+    new_session_id="$(find_session_by_marker "$marker")"
 
     if [[ -z "$new_session_id" ]]; then
-        echo "WARNING: Could not extract session_id from codex output." >&2
+        echo "Marker search failed, trying stdout regex..." >&2
+        new_session_id="$(extract_session_id "$output")"
+    fi
+
+    if [[ -z "$new_session_id" ]]; then
+        echo "WARNING: Could not extract session_id." >&2
         echo "Output from codex:" >&2
         echo "$output" >&2
         echo "" >&2
@@ -180,8 +240,6 @@ cmd_init() {
     fi
 
     SESSION_ID="$new_session_id"
-    local task_desc
-    task_desc="$(read_state_field "task_description")"
 
     write_state "{
   \"session_id\": \"$SESSION_ID\",
@@ -251,7 +309,13 @@ Instructions:
 - If acceptable, respond with APPROVED
 - If changes needed, provide specific actionable feedback
 - You can inspect the code yourself — you're in the same directory
-- The codex-review skill is at: $skill_path"
+- The codex-review skill is at: $skill_path
+
+After your review, write your verdict to .codex-review/verdict.txt
+Write exactly one word: APPROVED or CHANGES_REQUESTED"
+
+    # Clean previous verdict before calling codex
+    rm -f "$STATE_DIR/verdict.txt"
 
     # Call codex with resume
     echo "Sending $phase for review (iteration ${next_iteration}/${MAX_ITERATIONS})..." >&2
@@ -270,9 +334,9 @@ Instructions:
         exit 1
     }
 
-    # Parse status
+    # Read verdict (file → fallback to text parsing)
     local status
-    status="$(parse_review_status "$output")"
+    status="$(read_verdict "$output")"
 
     # Save note
     save_note "$phase" "$next_iteration" "$output"
@@ -300,7 +364,7 @@ case "$COMMAND" in
         echo "Usage: codex-review.sh <init|plan|code> \"description\" [--max-iter N]" >&2
         echo "" >&2
         echo "Commands:" >&2
-        echo "  init \"prompt\"        Create a new Codex session" >&2
+        echo "  init \"task\"          Create a new Codex session for the given task" >&2
         echo "  plan \"description\"   Submit plan for review" >&2
         echo "  code \"description\"   Submit code for review" >&2
         echo "" >&2

@@ -27,6 +27,7 @@ cmd_reset() {
     if [[ "${1:-}" == "--full" ]]; then
         rm -rf "$STATE_DIR/notes"/*.md
         rm -f "$STATE_FILE"
+        rm -f "$STATE_DIR/verdict.txt"
         remove_status
         mkdir -p "$STATE_DIR/notes"
         touch "$STATE_DIR/notes/.gitkeep"
@@ -82,6 +83,7 @@ cmd_set() {
     local tmp
     tmp=$(sed "s|\"$field\"[[:space:]]*:[[:space:]]*\"[^\"]*\"|\"$field\": \"$value\"|" "$STATE_FILE")
     echo "$tmp" > "$STATE_FILE"
+    write_status
     echo "Set $field = $value"
 }
 
