@@ -52,17 +52,15 @@ load_config
 check_codex_installed
 
 STATE_DIR="$(get_state_dir)"
-STATE_FILE="$STATE_DIR/state.json"
 
 MAX_ITERATIONS="${MAX_ITER:-$CODEX_MAX_ITERATIONS}"
 SESSION_ID="$(get_effective_session_id)"
 
-# --- Build yolo flags ---
-build_yolo_flag() {
-    if [[ "$CODEX_YOLO" == "true" ]]; then
-        echo "--yolo"
-    fi
-}
+# --- Build yolo flags (as array to avoid word splitting) ---
+YOLO_FLAG=()
+if [[ "$CODEX_YOLO" == "true" ]]; then
+    YOLO_FLAG=("--yolo")
+fi
 
 # --- Default reviewer prompt ---
 default_reviewer_prompt() {
@@ -213,7 +211,7 @@ Task: $task_desc
     local output
     output=$(CODEX_REVIEWER=1 codex exec \
         --model "$CODEX_MODEL" \
-        $(build_yolo_flag) \
+        "${YOLO_FLAG[@]}" \
         "$prompt" 2>&1) || {
         echo "ERROR: Failed to create Codex session." >&2
         echo "$output" >&2
@@ -324,7 +322,7 @@ Write exactly one word: APPROVED or CHANGES_REQUESTED"
     output=$(CODEX_REVIEWER=1 codex exec \
         --model "$CODEX_MODEL" \
         -c "model_reasoning_effort=\"$CODEX_REASONING_EFFORT\"" \
-        $(build_yolo_flag) \
+        "${YOLO_FLAG[@]}" \
         resume "$SESSION_ID" \
         "$codex_prompt" 2>&1) || {
         local exit_code=$?

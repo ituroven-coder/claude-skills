@@ -1,6 +1,7 @@
 #!/bin/bash
 # Common functions for codex-review plugin
 
+# shellcheck disable=SC2034
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # --- Anti-recursion guard (deterministic, primary defense) ---
@@ -166,13 +167,20 @@ find_session_by_marker() {
         return
     fi
 
-    # Extract UUID from filename: rollout-YYYY-MM-DDTHH-MM-SS-<UUID>.jsonl
-    local basename
-    basename="$(basename "$found_file" .jsonl)"
-    # Remove "rollout-" prefix and datetime (26 chars: YYYY-MM-DDTHH-MM-SS-)
-    local uuid_part
-    uuid_part=$(echo "$basename" | sed 's/^rollout-[0-9T-]*-//')
-    echo "$uuid_part"
+    # Primary: read session_meta.payload.id from first line via jq
+    if command -v jq &>/dev/null; then
+        local sid
+        sid=$(head -1 "$found_file" | jq -r '.payload.id // empty' 2>/dev/null)
+        if [[ -n "$sid" ]]; then
+            echo "$sid"
+            return
+        fi
+    fi
+
+    # Fallback: extract UUID via grep from first line (no jq)
+    local sid
+    sid=$(head -1 "$found_file" | grep -oE '"id":"[^"]+"' | head -1 | sed 's/"id":"//;s/"//')
+    echo "$sid"
 }
 
 # --- Check codex is installed ---
