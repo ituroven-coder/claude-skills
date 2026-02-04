@@ -292,9 +292,30 @@ cmd_review() {
         exit 2
     fi
 
-    # Build prompt for Codex
+    # Build phase-specific prompt for Codex
     local skill_path
     skill_path="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+    local phase_instructions
+    if [[ "$phase" == "plan" ]]; then
+        phase_instructions="You are reviewing a proposed implementation plan.
+
+Focus areas:
+- Does the approach solve the stated problem?
+- Are there architectural risks or better alternatives?
+- Is the scope appropriate — not too broad, not too narrow?
+- Are requirements and edge cases covered?
+- Is the chosen technology/pattern a good fit?"
+    else
+        phase_instructions="You are reviewing code changes.
+
+Focus areas:
+- Bugs, edge cases, off-by-one errors
+- Security vulnerabilities (injection, auth, data exposure)
+- Error handling and failure modes
+- Code readability and maintainability
+- Test coverage — are critical paths tested?"
+    fi
 
     local codex_prompt="You are reviewing work by Claude Code on this project.
 Phase: $phase
@@ -302,8 +323,9 @@ Phase: $phase
 Description from Claude:
 $DESCRIPTION
 
-Instructions:
-- Review the described changes in the context of this repository
+$phase_instructions
+
+General instructions:
 - If acceptable, respond with APPROVED
 - If changes needed, provide specific actionable feedback
 - You can inspect the code yourself — you're in the same directory
