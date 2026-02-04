@@ -27,6 +27,7 @@ cmd_reset() {
     if [[ "${1:-}" == "--full" ]]; then
         rm -rf "$STATE_DIR/notes"/*.md
         rm -f "$STATE_FILE"
+        remove_status
         mkdir -p "$STATE_DIR/notes"
         touch "$STATE_DIR/notes/.gitkeep"
         echo "Full reset complete."
@@ -43,6 +44,7 @@ cmd_reset() {
   \"last_review_timestamp\": \"\",
   \"task_description\": \"$task_desc\"
 }"
+        write_status
         echo "Reset complete (session_id preserved)."
     fi
 }

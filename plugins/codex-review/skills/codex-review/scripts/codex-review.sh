@@ -193,6 +193,7 @@ cmd_init() {
   \"task_description\": \"$task_desc\"
 }"
 
+    write_status
     echo "Session created: $SESSION_ID"
 }
 
@@ -278,6 +279,13 @@ Instructions:
 
     # Update state
     update_state "$phase" "$next_iteration" "$status"
+
+    # Update or remove STATUS.md
+    if [[ "$phase" == "code" && "$status" == "APPROVED" ]]; then
+        remove_status
+    else
+        write_status
+    fi
 
     # Print result
     print_result "$phase" "$next_iteration" "$MAX_ITERATIONS" "$SESSION_ID" "$output" "$status"

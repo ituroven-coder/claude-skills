@@ -33,6 +33,7 @@ npm install -g @openai/codex
 ```
 .codex-review/state.json
 .codex-review/config.env
+.codex-review/STATUS.md
 ```
 
 > `notes/` **НЕ** игнорируем — это журнал ревью для команды.
@@ -129,6 +130,7 @@ bash scripts/codex-state.sh set session_id <value>  # Ручная устано�
 .codex-review/
 ├── config.env              # gitignore — настройки
 ├── state.json              # gitignore — транзиентное состояние
+├── STATUS.md               # gitignore — автогенерируемый статус для Claude
 ├── notes/                  # В GIT — журнал ревью для команды
 │   ├── .gitkeep
 │   ├── plan-review-1.md
@@ -138,14 +140,14 @@ bash scripts/codex-state.sh set session_id <value>  # Ручная устано�
 
 ## CLAUDE.md
 
-Добавь в CLAUDE.md проекта:
+Добавь в CLAUDE.md проекта (одноразовая настройка):
 
 ```markdown
 ## Codex Review
-- Задача: [описание]
-- Статус: [planning|reviewing_plan|implementing|reviewing_code|done]
-- Журнал: `.codex-review/notes/`
+If `.codex-review/STATUS.md` exists, read it before starting work — an active review is in progress.
 ```
+
+`STATUS.md` создаётся и обновляется автоматически скриптами плагина. Наличие файла означает активное ревью, отсутствие — ревью не идёт или завершено.
 
 ## Анти-рекурсия
 

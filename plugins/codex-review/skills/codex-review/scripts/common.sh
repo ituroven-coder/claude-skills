@@ -100,6 +100,36 @@ write_state() {
     echo "$json" > "$state_dir/state.json"
 }
 
+# --- Write STATUS.md from current state.json ---
+write_status() {
+    local state_dir
+    state_dir="$(get_state_dir)"
+    local status_file="$state_dir/STATUS.md"
+
+    local task phase iteration max_iter review_status
+    task="$(read_state_field "task_description")"
+    phase="$(read_state_field "phase")"
+    iteration="$(read_state_number "iteration")"
+    max_iter="$(read_state_number "max_iterations")"
+    review_status="$(read_state_field "last_review_status")"
+
+    {
+        echo "# Active Codex Review"
+        echo "- Task: ${task:-not set}"
+        echo "- Phase: ${phase:-initialized}"
+        echo "- Iteration: ${iteration}/${max_iter}"
+        echo "- Last status: ${review_status:-pending}"
+        echo "- Journal: \`.codex-review/notes/\`"
+    } > "$status_file"
+}
+
+# --- Remove STATUS.md (review complete or full reset) ---
+remove_status() {
+    local state_dir
+    state_dir="$(get_state_dir)"
+    rm -f "$state_dir/STATUS.md"
+}
+
 # --- Check codex is installed ---
 check_codex_installed() {
     if ! command -v codex &>/dev/null; then
