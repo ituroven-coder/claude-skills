@@ -42,6 +42,18 @@
       "description": "Cross-agent review workflow: Claude implements, Codex reviews",
       "source": "./plugins/codex-review",
       "category": "development"
+    },
+    {
+      "name": "fal-ai-image",
+      "description": "Generate images using fal.ai nano-banana model",
+      "source": "./plugins/fal-ai-image",
+      "category": "productivity"
+    },
+    {
+      "name": "yandex-wordstat",
+      "description": "Анализ поискового спроса через Yandex Wordstat API",
+      "source": "./plugins/yandex-wordstat",
+      "category": "productivity"
     }
   ]
 }
