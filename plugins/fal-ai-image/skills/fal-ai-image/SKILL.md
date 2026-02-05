@@ -32,6 +32,11 @@ Multiple images needed?      → Parallel Bash/haiku subagents
 - Handles complex infographics, charts, and diagrams
 - Edit mode blends reference images naturally with prompt guidance
 
+## Compatibility
+
+Scripts are POSIX sh compatible — work in cloud sandboxes (`/bin/sh`) and locally (`bash`).
+No bashisms: `[[ ]]`, `${BASH_SOURCE}`, `source` etc. are NOT used.
+
 ## Config
 
 Requires `FAL_KEY` in `config/.env` or environment.
@@ -96,7 +101,7 @@ Script: `scripts/edit.sh`
 
 ### generate.sh
 ```bash
-bash scripts/generate.sh \
+sh scripts/generate.sh \
   --prompt "infographic about coffee brewing" \
   --aspect-ratio "9:16" \
   --resolution "1K" \
@@ -116,7 +121,7 @@ bash scripts/generate.sh \
 
 ### edit.sh
 ```bash
-bash scripts/edit.sh \
+sh scripts/edit.sh \
   --prompt "combine these into a collage" \
   --image-urls "https://example.com/img1.png,https://example.com/img2.png" \
   --aspect-ratio "16:9" \
@@ -137,10 +142,10 @@ bash scripts/edit.sh \
 ### upload.sh (for local files)
 ```bash
 # Get URL for local file
-URL=$(bash scripts/upload.sh --file /path/to/image.png)
+URL=$(sh scripts/upload.sh --file /path/to/image.png)
 
 # Or get base64 data URI (for small files)
-URI=$(bash scripts/upload.sh --file /path/to/image.png --base64)
+URI=$(sh scripts/upload.sh --file /path/to/image.png --base64)
 ```
 
 ## Parallel Generation

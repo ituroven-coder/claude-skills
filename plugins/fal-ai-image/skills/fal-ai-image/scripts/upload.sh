@@ -1,20 +1,21 @@
-#!/bin/bash
+#!/bin/sh
 # Upload local file to fal.ai storage and return URL
+# POSIX sh compatible — works in cloud sandboxes and locally
 # Usage: ./upload.sh --file /path/to/image.png
 # Output: URL that can be used in edit.sh --image-urls
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/../config/.env"
 
 # Load config
-if [[ -f "$CONFIG_FILE" ]]; then
+if [ -f "$CONFIG_FILE" ]; then
     # shellcheck disable=SC1090
-    source "$CONFIG_FILE"
+    . "$CONFIG_FILE"
 fi
 
-if [[ -z "$FAL_KEY" ]]; then
+if [ -z "$FAL_KEY" ]; then
     echo "Error: FAL_KEY not found. Set in config/.env or environment."
     exit 1
 fi
@@ -24,7 +25,7 @@ FILE_PATH=""
 OUTPUT_MODE="url"  # url or base64
 
 # Parse args
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
     case $1 in
         --file|-f) FILE_PATH="$2"; shift 2 ;;
         --base64) OUTPUT_MODE="base64"; shift ;;
@@ -32,13 +33,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ -z "$FILE_PATH" ]]; then
+if [ -z "$FILE_PATH" ]; then
     echo "Error: --file is required"
     echo "Usage: $0 --file /path/to/image.png"
     exit 1
 fi
 
-if [[ ! -f "$FILE_PATH" ]]; then
+if [ ! -f "$FILE_PATH" ]; then
     echo "Error: File not found: $FILE_PATH"
     exit 1
 fi
@@ -47,7 +48,7 @@ fi
 MIME_TYPE=$(file -b --mime-type "$FILE_PATH")
 
 # If base64 mode, just output data URI
-if [[ "$OUTPUT_MODE" == "base64" ]]; then
+if [ "$OUTPUT_MODE" = "base64" ]; then
     BASE64_DATA=$(base64 -w0 "$FILE_PATH" 2>/dev/null || base64 "$FILE_PATH")
     echo "data:$MIME_TYPE;base64,$BASE64_DATA"
     exit 0
@@ -67,7 +68,7 @@ INITIATE_RESPONSE=$(curl -s -X POST "https://rest.alpha.fal.ai/storage/upload/in
 UPLOAD_URL=$(echo "$INITIATE_RESPONSE" | grep -oE '"upload_url":[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
 FILE_URL=$(echo "$INITIATE_RESPONSE" | grep -oE '"file_url":[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
 
-if [[ -z "$UPLOAD_URL" || -z "$FILE_URL" ]]; then
+if [ -z "$UPLOAD_URL" ] || [ -z "$FILE_URL" ]; then
     echo "Error: Failed to get upload URL" >&2
     echo "$INITIATE_RESPONSE" >&2
 
