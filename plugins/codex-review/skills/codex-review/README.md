@@ -6,19 +6,33 @@
 
 ## Установка
 
-1. Добавь плагин в проект:
+### Вариант A: через marketplace (рекомендуется)
+
+1. Добавь репозиторий как marketplace (один раз):
 
 ```bash
-claude plugins add /path/to/polyakov-claude-skills/plugins/codex-review
+# Из локальной директории
+claude plugin marketplace add /path/to/polyakov-claude-skills
+
+# Или из GitHub
+claude plugin marketplace add github:artwist-polyakov/polyakov-claude-skills
 ```
 
-Или через marketplace:
+2. Установи плагин:
 
 ```bash
-claude plugins add codex-review --registry polyakov-claude-skills
+claude plugin install codex-review@polyakov-claude-skills
 ```
 
-2. Убедись, что `codex` CLI установлен:
+### Вариант B: для одной сессии
+
+```bash
+claude --plugin-dir /path/to/polyakov-claude-skills/plugins/codex-review
+```
+
+### Зависимости
+
+Убедись, что `codex` CLI установлен:
 
 ```bash
 npm install -g @openai/codex
@@ -33,6 +47,8 @@ npm install -g @openai/codex
 ```
 .codex-review/state.json
 .codex-review/config.env
+.codex-review/STATUS.md
+.codex-review/verdict.txt
 ```
 
 > `notes/` **НЕ** игнорируем — это журнал ревью для команды.
@@ -48,6 +64,7 @@ npm install -g @openai/codex
 - Давай конкретный actionable фидбек
 - Можешь смотреть код/diff самостоятельно
 - Не запускай скрипты из skills/codex-review/ — ты ревьюер
+- После ревью запиши вердикт в .codex-review/verdict.txt (одно слово: APPROVED или CHANGES_REQUESTED)
 ```
 
 ### settings.local.json
@@ -76,8 +93,11 @@ npm install -g @openai/codex
 
 CODEX_MODEL=gpt-5.2
 CODEX_REASONING_EFFORT=high
-CODEX_MAX_ITERATIONS=3
+CODEX_MAX_ITERATIONS=5
 CODEX_YOLO=true
+
+# Custom reviewer prompt (optional, replaces built-in default)
+# CODEX_REVIEWER_PROMPT="You are a security-focused code reviewer..."
 ```
 
 ## Использование
@@ -102,13 +122,13 @@ CODEX_SESSION_ID=sess_ваш_id
 "Используем workflow с codex ревьювером. Задачи: #23, #10"
 ```
 
-Claude попросит создать сессию Codex с промптом для ревьюера.
+Claude создаст сессию Codex автоматически. Аргумент `init` — описание задачи. Промпт для ревьюера формируется скриптом (встроенный или кастомный через `CODEX_REVIEWER_PROMPT`).
 
 ### Workflow
 
-1. **Init** — Claude создает сессию Codex (или используется существующая)
+1. **Init** — Claude создает сессию Codex с описанием задачи
 2. **Plan Review** — Claude описывает план, Codex ревьюит
-3. **Implementation** — Claude реализует по плану
+3. **Implementation** — Claude обновляет фазу и реализует по плану
 4. **Code Review** — Claude описывает изменения, Codex ревьюит
 5. **Done** — результат пользователю
 
@@ -119,6 +139,7 @@ bash scripts/codex-state.sh show          # Текущее состояние
 bash scripts/codex-state.sh reset         # Сброс итераций
 bash scripts/codex-state.sh reset --full  # Полный сброс
 bash scripts/codex-state.sh set session_id <value>  # Ручная установка
+bash scripts/codex-state.sh set phase implementing  # Обновить фазу
 ```
 
 ## Структура .codex-review/
@@ -129,6 +150,8 @@ bash scripts/codex-state.sh set session_id <value>  # Ручная устано�
 .codex-review/
 ├── config.env              # gitignore — настройки
 ├── state.json              # gitignore — транзиентное состояние
+├── STATUS.md               # gitignore — автогенерируемый статус для Claude
+├── verdict.txt             # gitignore — последний вердикт от Codex
 ├── notes/                  # В GIT — журнал ревью для команды
 │   ├── .gitkeep
 │   ├── plan-review-1.md
@@ -138,14 +161,14 @@ bash scripts/codex-state.sh set session_id <value>  # Ручная устано�
 
 ## CLAUDE.md
 
-Добавь в CLAUDE.md проекта:
+Добавь в CLAUDE.md проекта (одноразовая настройка):
 
 ```markdown
 ## Codex Review
-- Задача: [описание]
-- Статус: [planning|reviewing_plan|implementing|reviewing_code|done]
-- Журнал: `.codex-review/notes/`
+If `.codex-review/STATUS.md` exists, read it before starting work — an active review is in progress.
 ```
+
+`STATUS.md` создаётся и обновляется автоматически скриптами плагина. Наличие файла означает активное ревью, отсутствие — ревью не идёт или завершено.
 
 ## Анти-рекурсия
 

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Common functions for codex-review plugin
 
+# shellcheck disable=SC2034
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # --- Anti-recursion guard (deterministic, primary defense) ---
@@ -42,8 +43,9 @@ load_config() {
 
     CODEX_MODEL="${CODEX_MODEL:-gpt-5.2}"
     CODEX_REASONING_EFFORT="${CODEX_REASONING_EFFORT:-high}"
-    CODEX_MAX_ITERATIONS="${CODEX_MAX_ITERATIONS:-3}"
+    CODEX_MAX_ITERATIONS="${CODEX_MAX_ITERATIONS:-5}"
     CODEX_YOLO="${CODEX_YOLO:-true}"
+    CODEX_REVIEWER_PROMPT="${CODEX_REVIEWER_PROMPT:-}"
 }
 
 # --- Read a field from state.json (no jq dependency) ---
@@ -98,6 +100,87 @@ write_state() {
     local state_dir
     state_dir="$(get_state_dir)"
     echo "$json" > "$state_dir/state.json"
+}
+
+# --- Write STATUS.md from current state.json ---
+write_status() {
+    local state_dir
+    state_dir="$(get_state_dir)"
+    local status_file="$state_dir/STATUS.md"
+
+    local task phase iteration max_iter review_status
+    task="$(read_state_field "task_description")"
+    phase="$(read_state_field "phase")"
+    iteration="$(read_state_number "iteration")"
+    max_iter="$(read_state_number "max_iterations")"
+    review_status="$(read_state_field "last_review_status")"
+
+    {
+        echo "# Active Codex Review"
+        echo "- Task: ${task:-not set}"
+        echo "- Phase: ${phase:-initialized}"
+        echo "- Iteration: ${iteration}/${max_iter}"
+        echo "- Last status: ${review_status:-pending}"
+        echo "- Journal: \`.codex-review/notes/\`"
+    } > "$status_file"
+}
+
+# --- Remove STATUS.md (review complete or full reset) ---
+remove_status() {
+    local state_dir
+    state_dir="$(get_state_dir)"
+    rm -f "$state_dir/STATUS.md"
+}
+
+# --- Generate UUID ---
+generate_uuid() {
+    cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || {
+        # Last resort: pseudo-random hex
+        od -x /dev/urandom 2>/dev/null | head -1 | awk '{print $2$3"-"$4"-"$5"-"$6"-"$7$8$9}'
+    }
+}
+
+# --- Codex sessions directory for today ---
+get_sessions_dir() {
+    local codex_home="${CODEX_HOME:-$HOME/.codex}"
+    local today
+    today="$(date -u +%Y/%m/%d)"
+    echo "$codex_home/sessions/$today"
+}
+
+# --- Find session_id by marker UUID in today's session files ---
+find_session_by_marker() {
+    local marker="$1"
+    local sessions_dir
+    sessions_dir="$(get_sessions_dir)"
+
+    if [[ ! -d "$sessions_dir" ]]; then
+        echo ""
+        return
+    fi
+
+    local found_file
+    found_file=$(grep -rl "$marker" "$sessions_dir"/ 2>/dev/null | head -1)
+
+    if [[ -z "$found_file" ]]; then
+        echo ""
+        return
+    fi
+
+    # Primary: read session_meta.payload.id from first line via jq
+    if command -v jq &>/dev/null; then
+        local sid
+        sid=$(head -1 "$found_file" | jq -r '.payload.id // empty' 2>/dev/null)
+        if [[ -n "$sid" ]]; then
+            echo "$sid"
+            return
+        fi
+    fi
+
+    # Fallback: extract UUID via grep from first line (no jq)
+    local sid
+    sid=$(head -1 "$found_file" | grep -oE '"id":"[^"]+"' | head -1 | sed 's/"id":"//;s/"//')
+    echo "$sid"
 }
 
 # --- Check codex is installed ---
