@@ -207,16 +207,23 @@ Task: $task_desc
     fi
 
     echo "Creating Codex session..." >&2
+    echo "Monitor progress: tail -f $STATE_DIR/codex.log" >&2
 
-    local output
-    output=$(CODEX_REVIEWER=1 codex exec \
+    local output_file="$STATE_DIR/last_response.txt"
+    local log_file="$STATE_DIR/codex.log"
+
+    CODEX_REVIEWER=1 codex exec \
         --model "$CODEX_MODEL" \
         "${YOLO_FLAG[@]}" \
-        "$prompt" 2>&1) || {
+        -o "$output_file" \
+        "$prompt" > "$log_file" 2>&1 || {
         echo "ERROR: Failed to create Codex session." >&2
-        echo "$output" >&2
+        cat "$log_file" >&2
         exit 1
     }
+
+    local output
+    output=$(cat "$output_file" 2>/dev/null || echo "")
 
     # Extract session_id: marker search → stdout regex → manual
     local new_session_id
@@ -224,13 +231,13 @@ Task: $task_desc
 
     if [[ -z "$new_session_id" ]]; then
         echo "Marker search failed, trying stdout regex..." >&2
-        new_session_id="$(extract_session_id "$output")"
+        new_session_id="$(extract_session_id "$(cat "$log_file" 2>/dev/null)")"
     fi
 
     if [[ -z "$new_session_id" ]]; then
         echo "WARNING: Could not extract session_id." >&2
-        echo "Output from codex:" >&2
-        echo "$output" >&2
+        echo "Log from codex:" >&2
+        cat "$log_file" >&2
         echo "" >&2
         echo "Please set session_id manually:" >&2
         echo "  bash codex-state.sh set session_id <YOUR_SESSION_ID>" >&2
@@ -360,20 +367,27 @@ Write exactly one word: APPROVED or CHANGES_REQUESTED"
 
     # Call codex with resume
     echo "Sending $phase for review (iteration ${next_iteration}/${MAX_ITERATIONS})..." >&2
+    echo "Monitor progress: tail -f $STATE_DIR/codex.log" >&2
 
-    local output
-    output=$(CODEX_REVIEWER=1 codex exec \
+    local output_file="$STATE_DIR/last_response.txt"
+    local log_file="$STATE_DIR/codex.log"
+
+    CODEX_REVIEWER=1 codex exec \
         --model "$CODEX_MODEL" \
         -c "model_reasoning_effort=\"$CODEX_REASONING_EFFORT\"" \
         "${YOLO_FLAG[@]}" \
+        -o "$output_file" \
         resume "$SESSION_ID" \
-        "$codex_prompt" 2>&1) || {
+        "$codex_prompt" > "$log_file" 2>&1 || {
         local exit_code=$?
         echo "ERROR: Codex exec failed (exit $exit_code)." >&2
-        echo "$output" >&2
+        cat "$log_file" >&2
         update_state "$phase" "$next_iteration" "ERROR"
         exit 1
     }
+
+    local output
+    output=$(cat "$output_file" 2>/dev/null || echo "")
 
     # Read verdict (file → fallback to text parsing)
     local status
