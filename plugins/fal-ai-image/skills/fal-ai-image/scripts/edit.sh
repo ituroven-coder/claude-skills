@@ -6,6 +6,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/../config/.env"
 API_BASE="https://queue.fal.run/fal-ai/nano-banana-pro/edit"
+STATUS_BASE="https://queue.fal.run/fal-ai/nano-banana-pro"
 
 # Load config
 if [[ -f "$CONFIG_FILE" ]]; then
@@ -93,7 +94,7 @@ MAX_ATTEMPTS=60
 ATTEMPT=0
 
 while [[ $ATTEMPT -lt $MAX_ATTEMPTS ]]; do
-    STATUS_RESPONSE=$(curl -s "$API_BASE/requests/$REQUEST_ID/status" \
+    STATUS_RESPONSE=$(curl -s "$STATUS_BASE/requests/$REQUEST_ID/status" \
         -H "Authorization: Key $FAL_KEY")
 
     STATUS=$(echo "$STATUS_RESPONSE" | grep -oE '"status":[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')
@@ -128,7 +129,7 @@ if [[ $ATTEMPT -ge $MAX_ATTEMPTS ]]; then
 fi
 
 # Get result
-RESULT=$(curl -s "$API_BASE/requests/$REQUEST_ID" \
+RESULT=$(curl -s "$STATUS_BASE/requests/$REQUEST_ID" \
     -H "Authorization: Key $FAL_KEY")
 
 # Download images if output_dir specified
