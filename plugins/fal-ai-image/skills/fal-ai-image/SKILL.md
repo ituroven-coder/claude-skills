@@ -1,12 +1,36 @@
 ---
 name: fal-ai-image
-description: Generate images using fal.ai nano-banana-pro model
+description: "Generate/edit images via fal.ai nano-banana-pro. Supports reference images (Edit mode) and text rendering in any language including Cyrillic. ALWAYS read SKILL.md before first use."
 ---
 
 # fal-ai-image
 
 Generate images via fal.ai nano-banana-pro (Gemini 3 Pro Image).
 Best for: infographics, text rendering, complex compositions.
+
+## STOP — Read Before Acting
+
+- **DO NOT** use Pillow, ImageMagick, or any post-processing for text/logo overlay — this model renders text natively, including Cyrillic and CJK
+- **DO NOT** use Generate mode when user provides reference images — use **Edit mode**
+- **DO NOT** launch general-purpose subagents — use `Task` with `subagent_type: "Bash"` and `model: "haiku"`
+- **DO NOT** skip uploading local files — run `upload.sh` first to get URLs for `edit.sh`
+- **DO NOT** guess script parameters — check the tables below
+
+## Quick Start Decision
+
+```
+User gave reference images?  → Edit mode  (upload.sh → edit.sh)
+User wants text-only gen?    → Generate mode (generate.sh)
+Multiple images needed?      → Parallel Bash/haiku subagents
+```
+
+## Model Capabilities
+
+- Excellent text rendering (Latin, Cyrillic, CJK) — no post-processing needed
+- Composes logos, product photos, and text into banners in a single pass
+- Understands layout instructions ("left side text, right side product photo")
+- Handles complex infographics, charts, and diagrams
+- Edit mode blends reference images naturally with prompt guidance
 
 ## Config
 
