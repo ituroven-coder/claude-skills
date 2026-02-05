@@ -18,6 +18,7 @@
 /plugin install ssh-remote-connection
 /plugin install yandex-wordstat
 /plugin install codex-review
+/plugin install fal-ai-image
 ```
 
 ### Ручная установка (без маркетплейса)
@@ -175,6 +176,26 @@ SSH подключение к удалённым серверам с agent forwa
 
 ---
 
+### [fal-ai-image](plugins/fal-ai-image/skills/fal-ai-image)
+
+Генерация изображений через fal.ai nano-banana-pro (Gemini 3 Pro Image).
+
+- Генерация из текстового промпта (text-to-image)
+- Редактирование с референсными изображениями (image-to-image)
+- Поддержка разрешений 1K / 2K / 4K
+
+**Триггеры (RU):**
+- "сгенерируй изображение"
+- "нарисуй картинку"
+- "создай инфографику"
+
+**Триггеры (EN):**
+- "generate image"
+- "create infographic"
+- "draw a picture"
+
+---
+
 ## Структура репозитория
 
 ```
@@ -188,7 +209,8 @@ polyakov-claude-skills/
 │   ├── genome-analizer/      # Плагин для анализа генома
 │   ├── ssh-remote-connection/# Плагин для SSH
 │   ├── yandex-wordstat/      # Плагин для Wordstat API
-│   └── codex-review/         # Плагин для кросс-агентного ревью
+│   ├── codex-review/         # Плагин для кросс-агентного ревью
+│   └── fal-ai-image/         # Плагин для генерации изображений
 └── README.md
 ```
 
