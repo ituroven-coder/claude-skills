@@ -132,6 +132,38 @@ remove_status() {
     rm -f "$state_dir/STATUS.md"
 }
 
+# --- Archive previous session artifacts ---
+archive_previous_session() {
+    local state_dir
+    state_dir="$(get_state_dir)"
+    local has_artifacts=false
+
+    # Check if there's anything to archive
+    for f in "$state_dir"/state.json "$state_dir"/verdict.txt "$state_dir"/last_response.txt "$state_dir"/STATUS.md; do
+        if [[ -f "$f" ]]; then has_artifacts=true; break; fi
+    done
+    if ls "$state_dir"/notes/*.md &>/dev/null; then has_artifacts=true; fi
+    if ls "$state_dir"/codex-*.log &>/dev/null; then has_artifacts=true; fi
+
+    if [[ "$has_artifacts" == "false" ]]; then
+        return
+    fi
+
+    local timestamp
+    timestamp="$(date -u +"%Y%m%dT%H%M%SZ")"
+    local archive_dir="$state_dir/archive/$timestamp"
+    mkdir -p "$archive_dir/notes"
+
+    # Move artifacts
+    for f in state.json verdict.txt last_response.txt STATUS.md; do
+        [[ -f "$state_dir/$f" ]] && mv "$state_dir/$f" "$archive_dir/"
+    done
+    mv "$state_dir"/codex-*.log "$archive_dir/" 2>/dev/null || true
+    mv "$state_dir"/notes/*.md "$archive_dir/notes/" 2>/dev/null || true
+
+    echo "Previous session archived to: $archive_dir" >&2
+}
+
 # --- Generate UUID ---
 generate_uuid() {
     cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || {

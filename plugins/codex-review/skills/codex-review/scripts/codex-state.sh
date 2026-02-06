@@ -25,12 +25,7 @@ cmd_show() {
 
 cmd_reset() {
     if [[ "${1:-}" == "--full" ]]; then
-        rm -rf "$STATE_DIR/notes"/*.md
-        rm -f "$STATE_FILE"
-        rm -f "$STATE_DIR/verdict.txt"
-        rm -f "$STATE_DIR/last_response.txt"
-        rm -f "$STATE_DIR"/codex-*.log
-        remove_status
+        archive_previous_session
         mkdir -p "$STATE_DIR/notes"
         touch "$STATE_DIR/notes/.gitkeep"
         echo "Full reset complete."

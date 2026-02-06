@@ -82,6 +82,7 @@ When reviewing:
 - If the work is acceptable, respond with APPROVED
 - If changes are needed, provide specific actionable feedback
 - Do NOT run scripts from .codex-review/ — you are the reviewer, not the implementer
+- Do NOT look into .codex-review/archive/ — it contains previous session artifacts and is not relevant
 
 Task: $task_desc
 [session-marker: $marker]
@@ -183,6 +184,9 @@ print_result() {
 # =====================
 cmd_init() {
     local task_desc="$DESCRIPTION"
+
+    # Archive previous session artifacts
+    archive_previous_session
 
     # Warn if config.env already has a session
     if [[ -n "${CODEX_SESSION_ID:-}" ]]; then
