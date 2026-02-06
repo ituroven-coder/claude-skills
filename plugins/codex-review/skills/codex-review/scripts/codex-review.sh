@@ -210,7 +210,7 @@ Task: $task_desc
     local log_file="$STATE_DIR/codex-init.log"
 
     echo "Creating Codex session..." >&2
-    echo "Monitor progress: tail -f $log_file" >&2
+    printf '\033[1;33m>>> Monitor: tail -f %s\033[0m\n' "$log_file" >&2
 
     CODEX_REVIEWER=1 codex exec \
         --model "$CODEX_MODEL" \
@@ -370,7 +370,7 @@ Write exactly one word: APPROVED or CHANGES_REQUESTED"
     local log_file="$STATE_DIR/codex-${phase}-${next_iteration}.log"
 
     echo "Sending $phase for review (iteration ${next_iteration}/${MAX_ITERATIONS})..." >&2
-    echo "Monitor progress: tail -f $log_file" >&2
+    printf '\033[1;33m>>> Monitor: tail -f %s\033[0m\n' "$log_file" >&2
 
     CODEX_REVIEWER=1 codex exec \
         --model "$CODEX_MODEL" \
