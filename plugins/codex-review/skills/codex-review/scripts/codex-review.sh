@@ -359,8 +359,9 @@ General instructions:
 - You can inspect the code yourself — you're in the same directory
 - The codex-review skill is at: $skill_path
 
-After your review, write your verdict to .codex-review/verdict.txt
-Write exactly one word: APPROVED or CHANGES_REQUESTED"
+After your review, write your verdict to $STATE_DIR/verdict.txt
+Write exactly one word: APPROVED or CHANGES_REQUESTED
+The directory exists. The file is cleared before each review — always create it fresh."
 
     # Clean previous verdict before calling codex
     rm -f "$STATE_DIR/verdict.txt"
