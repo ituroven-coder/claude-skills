@@ -206,11 +206,11 @@ Task: $task_desc
         prompt="$(default_reviewer_prompt "$task_desc" "$marker")"
     fi
 
-    echo "Creating Codex session..." >&2
-    echo "Monitor progress: tail -f $STATE_DIR/codex.log" >&2
-
     local output_file="$STATE_DIR/last_response.txt"
-    local log_file="$STATE_DIR/codex.log"
+    local log_file="$STATE_DIR/codex-init.log"
+
+    echo "Creating Codex session..." >&2
+    echo "Monitor progress: tail -f $log_file" >&2
 
     CODEX_REVIEWER=1 codex exec \
         --model "$CODEX_MODEL" \
@@ -366,11 +366,11 @@ Write exactly one word: APPROVED or CHANGES_REQUESTED"
     rm -f "$STATE_DIR/verdict.txt"
 
     # Call codex with resume
-    echo "Sending $phase for review (iteration ${next_iteration}/${MAX_ITERATIONS})..." >&2
-    echo "Monitor progress: tail -f $STATE_DIR/codex.log" >&2
-
     local output_file="$STATE_DIR/last_response.txt"
-    local log_file="$STATE_DIR/codex.log"
+    local log_file="$STATE_DIR/codex-${phase}-${next_iteration}.log"
+
+    echo "Sending $phase for review (iteration ${next_iteration}/${MAX_ITERATIONS})..." >&2
+    echo "Monitor progress: tail -f $log_file" >&2
 
     CODEX_REVIEWER=1 codex exec \
         --model "$CODEX_MODEL" \

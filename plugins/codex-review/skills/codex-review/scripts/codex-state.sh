@@ -29,7 +29,7 @@ cmd_reset() {
         rm -f "$STATE_FILE"
         rm -f "$STATE_DIR/verdict.txt"
         rm -f "$STATE_DIR/last_response.txt"
-        rm -f "$STATE_DIR/codex.log"
+        rm -f "$STATE_DIR"/codex-*.log
         remove_status
         mkdir -p "$STATE_DIR/notes"
         touch "$STATE_DIR/notes/.gitkeep"
