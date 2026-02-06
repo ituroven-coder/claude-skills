@@ -49,6 +49,9 @@ npm install -g @openai/codex
 .codex-review/config.env
 .codex-review/STATUS.md
 .codex-review/verdict.txt
+.codex-review/last_response.txt
+.codex-review/codex-*.log
+.codex-review/archive/
 ```
 
 > `notes/` **НЕ** игнорируем — это журнал ревью для команды.
@@ -64,6 +67,7 @@ npm install -g @openai/codex
 - Давай конкретный actionable фидбек
 - Можешь смотреть код/diff самостоятельно
 - Не запускай скрипты из skills/codex-review/ — ты ревьюер
+- Не заглядывай в .codex-review/archive/ — там артефакты прошлых сессий
 - После ревью запиши вердикт в .codex-review/verdict.txt (одно слово: APPROVED или CHANGES_REQUESTED)
 ```
 
@@ -152,7 +156,12 @@ bash scripts/codex-state.sh set phase implementing  # Обновить фазу
 ├── state.json              # gitignore — транзиентное состояние
 ├── STATUS.md               # gitignore — автогенерируемый статус для Claude
 ├── verdict.txt             # gitignore — последний вердикт от Codex
-├── notes/                  # В GIT — журнал ревью для команды
+├── last_response.txt       # gitignore — последний ответ Codex
+├── codex-init.log          # gitignore — лог инициализации сессии
+├── codex-{phase}-{N}.log   # gitignore — логи итераций ревью (tail -f для мониторинга)
+├── archive/                # gitignore — архив предыдущих сессий (создаётся при init)
+│   └── {timestamp}/        # артефакты одной сессии (notes, logs, state)
+├── notes/                  # В GIT — журнал текущего ревью для команды
 │   ├── .gitkeep
 │   ├── plan-review-1.md
 │   └── code-review-1.md
