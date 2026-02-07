@@ -155,7 +155,7 @@ The output contains two sections (both in stdout and CSV):
 
 #### CSV export details
 
-CSV format: UTF-8 with BOM, columns: `rank;phrase;impressions;type`.
+CSV format: UTF-8 with BOM, columns: `n;phrase;impressions;type`.
 When `--csv` is set, stdout shows first 20 rows per section; full data goes to file.
 
 #### Working with large CSV exports

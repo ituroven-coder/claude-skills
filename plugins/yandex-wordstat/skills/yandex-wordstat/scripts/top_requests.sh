@@ -111,7 +111,7 @@ csv_escape() {
 # --- Init CSV file ---
 if [[ -n "$CSV_FILE" ]]; then
     printf '\xEF\xBB\xBF' > "$CSV_FILE"
-    printf 'rank%sphrase%simpressions%stype\n' "$CSV_SEP" "$CSV_SEP" "$CSV_SEP" >> "$CSV_FILE"
+    printf 'n%sphrase%simpressions%stype\n' "$CSV_SEP" "$CSV_SEP" "$CSV_SEP" >> "$CSV_FILE"
 fi
 
 # --- Normalize JSON to single line for safe parsing ---
