@@ -85,6 +85,8 @@ When reviewing:
 - Do NOT look into .codex-review/archive/ — it contains previous session artifacts and is not relevant
 
 Task: $task_desc
+
+Start by exploring the codebase areas relevant to this task. Understand the current architecture, patterns, and conventions so you are prepared to review the upcoming plan and code changes. When ready, say "Ready for review" and stop.
 [session-marker: $marker]
 PROMPT
 }
