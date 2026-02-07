@@ -1,11 +1,26 @@
-#!/bin/bash
+#!/bin/sh
 # Get top search phrases from Yandex Wordstat
-# Supports --limit (up to 2000) and --csv export
+# POSIX sh compatible — works in cloud sandboxes and locally
+# Uses temp file for API response to avoid stdout buffer overflow
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/../config/.env"
+WS_API="https://api.wordstat.yandex.net/v1"
+
+# --- Inline config (no external source) ---
+
+if [ -f "$CONFIG_FILE" ]; then
+    # shellcheck disable=SC1090
+    . "$CONFIG_FILE"
+fi
+
+if [ -z "$YANDEX_WORDSTAT_TOKEN" ]; then
+    echo "Error: YANDEX_WORDSTAT_TOKEN not found."
+    echo "Set in config/.env or environment. See config/README.md."
+    exit 1
+fi
 
 # Defaults
 PHRASE=""
@@ -16,8 +31,13 @@ CSV_FILE=""
 CSV_SEP=";"
 STDOUT_MAX=20
 
+# Temp file for API response (avoids piping huge strings through stdout)
+TMPFILE="${TMPDIR:-/tmp}/ws_result_$$.json"
+cleanup() { rm -f "$TMPFILE"; }
+trap cleanup EXIT
+
 # Parse args
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
     case $1 in
         --phrase|-p) PHRASE="$2"; shift 2 ;;
         --regions|-r) REGIONS="$2"; shift 2 ;;
@@ -29,7 +49,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ -z "$PHRASE" ]]; then
+if [ -z "$PHRASE" ]; then
     echo "Usage: top_requests.sh --phrase \"search query\" [options]"
     echo ""
     echo "Options:"
@@ -41,42 +61,54 @@ if [[ -z "$PHRASE" ]]; then
     echo "  --sep          CSV separator (default: ;)"
     echo ""
     echo "Examples:"
-    echo "  bash scripts/top_requests.sh --phrase \"юрист по дтп\""
-    echo "  bash scripts/top_requests.sh --phrase \"юрист дтп\" --limit 500"
-    echo "  bash scripts/top_requests.sh --phrase \"юрист дтп\" --limit 2000 --csv report.csv"
-    echo "  bash scripts/top_requests.sh --phrase \"юрист дтп\" --csv report.csv --sep \",\""
+    echo "  sh scripts/top_requests.sh --phrase \"юрист по дтп\""
+    echo "  sh scripts/top_requests.sh --phrase \"юрист дтп\" --limit 500"
+    echo "  sh scripts/top_requests.sh --phrase \"юрист дтп\" --limit 2000 --csv report.csv"
     exit 1
 fi
 
 # Validate --limit
-if [[ -n "$LIMIT" ]]; then
+if [ -n "$LIMIT" ]; then
     if ! echo "$LIMIT" | grep -qE '^[0-9]+$'; then
         echo "Error: --limit must be a positive integer (1-2000)"
         exit 1
     fi
-    if [[ "$LIMIT" -lt 1 || "$LIMIT" -gt 2000 ]]; then
+    if [ "$LIMIT" -lt 1 ] || [ "$LIMIT" -gt 2000 ]; then
         echo "Error: --limit must be between 1 and 2000 (got: $LIMIT)"
         exit 1
     fi
 fi
 
-load_config
+# Escape string for JSON
+json_escape() {
+    printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
 
-# Escape phrase for JSON
+# Format number with thousands separator
+format_number() {
+    printf "%'d" "$1" 2>/dev/null || echo "$1"
+}
+
+# Escape a value for CSV (RFC 4180)
+csv_escape() {
+    _csv_val=$(printf '%s' "$1" | tr -d '\n\r')
+    _csv_val=$(printf '%s' "$_csv_val" | sed 's/"/""/g')
+    printf '"%s"' "$_csv_val"
+}
+
+# Build JSON payload
 PHRASE_ESCAPED=$(json_escape "$PHRASE")
-
-# Build JSON params
 PARAMS="{\"phrase\":\"$PHRASE_ESCAPED\""
 
-if [[ -n "$LIMIT" ]]; then
+if [ -n "$LIMIT" ]; then
     PARAMS="$PARAMS,\"numPhrases\":$LIMIT"
 fi
 
-if [[ -n "$REGIONS" ]]; then
+if [ -n "$REGIONS" ]; then
     PARAMS="$PARAMS,\"regions\":[$REGIONS]"
 fi
 
-if [[ "$DEVICES" != "all" ]]; then
+if [ "$DEVICES" != "all" ]; then
     PARAMS="$PARAMS,\"devices\":\"$DEVICES\""
 fi
 
@@ -84,97 +116,85 @@ PARAMS="$PARAMS}"
 
 echo "=== Yandex Wordstat: Top Requests ==="
 echo "Phrase: $PHRASE"
-[[ -n "$REGIONS" ]] && echo "Regions: $REGIONS"
+[ -n "$REGIONS" ] && echo "Regions: $REGIONS"
 echo "Devices: $DEVICES"
-[[ -n "$LIMIT" ]] && echo "Limit: $LIMIT"
-[[ -n "$CSV_FILE" ]] && echo "Export: $CSV_FILE (sep='$CSV_SEP')"
+[ -n "$LIMIT" ] && echo "Limit: $LIMIT"
+[ -n "$CSV_FILE" ] && echo "Export: $CSV_FILE (sep='$CSV_SEP')"
 echo ""
 echo "Fetching data..."
 
-result=$(wordstat_request "topRequests" "$PARAMS")
+# API request — save to temp file, not variable
+curl -s -X POST "$WS_API/topRequests" \
+    -H "Authorization: Bearer $YANDEX_WORDSTAT_TOKEN" \
+    -H "Content-Type: application/json; charset=utf-8" \
+    -d "$PARAMS" | tr -d '\n\r' > "$TMPFILE"
 
 # Check for error
-if echo "$result" | grep -q '"error"'; then
+if grep -q '"error"' "$TMPFILE"; then
     echo "Error:"
-    echo "$result"
+    cat "$TMPFILE"
     exit 1
 fi
 
-# --- CSV helper ---
-csv_escape() {
-    local val="$1"
-    val=$(printf '%s' "$val" | tr -d '\n\r')
-    val="${val//\"/\"\"}"
-    printf '"%s"' "$val"
-}
-
-# --- Init CSV file ---
-if [[ -n "$CSV_FILE" ]]; then
+# Init CSV file
+if [ -n "$CSV_FILE" ]; then
     printf '\xEF\xBB\xBF' > "$CSV_FILE"
     printf 'n%sphrase%simpressions%stype\n' "$CSV_SEP" "$CSV_SEP" "$CSV_SEP" >> "$CSV_FILE"
 fi
 
-# --- Normalize JSON to single line for safe parsing ---
-result=$(printf '%s' "$result" | tr -d '\n\r')
-
-# --- Extract totalCount ---
-total_count=$(echo "$result" | grep -o '"totalCount":[0-9]*' | head -1 | sed 's/"totalCount"://')
+# Extract totalCount
+total_count=$(grep -o '"totalCount":[0-9]*' "$TMPFILE" | head -1 | sed 's/"totalCount"://')
 
 echo ""
 echo "=== Top Requests ==="
-if [[ -n "$total_count" ]]; then
+if [ -n "$total_count" ]; then
     echo "Total count (broad match): $(format_number "$total_count")"
 fi
 echo ""
 echo "| # | Phrase | Impressions |"
 echo "|---|--------|-------------|"
 
-# --- Process a JSON array of {phrase, count} entries ---
-# Args: $1=entries_string $2=type_label
-# Writes to stdout (limited when CSV) and CSV file
+# Process JSON array of {phrase, count} entries
+# Reads from TMPFILE via sed extraction, never pipes full JSON through echo
 process_entries() {
-    local entries_str="$1"
-    local type_label="$2"
-    local rank=0
-    local total=0
+    _pe_str="$1"
+    _pe_type="$2"
+    _pe_rank=0
 
-    # Count total entries for truncation message
-    total=$(echo "$entries_str" | grep -o '{"phrase":"[^"]*","count":[0-9]*}' | wc -l | tr -d ' ')
+    _pe_total=$(printf '%s' "$_pe_str" | grep -o '{"phrase":"[^"]*","count":[0-9]*}' | wc -l | tr -d ' ')
 
-    echo "$entries_str" | grep -o '{"phrase":"[^"]*","count":[0-9]*}' | while IFS= read -r entry; do
-        rank=$((rank + 1))
+    printf '%s' "$_pe_str" | grep -o '{"phrase":"[^"]*","count":[0-9]*}' | while IFS= read -r _pe_entry; do
+        _pe_rank=$((_pe_rank + 1))
 
-        phrase=$(echo "$entry" | grep -o '"phrase":"[^"]*"' | sed 's/"phrase":"//' | tr -d '"')
-        shows=$(echo "$entry" | grep -o '"count":[0-9]*' | sed 's/"count"://')
+        _pe_phrase=$(printf '%s' "$_pe_entry" | grep -o '"phrase":"[^"]*"' | sed 's/"phrase":"//' | tr -d '"')
+        _pe_shows=$(printf '%s' "$_pe_entry" | grep -o '"count":[0-9]*' | sed 's/"count"://')
 
         # stdout: show all if no CSV, or first STDOUT_MAX rows if CSV mode
-        if [[ -z "$CSV_FILE" ]] || [[ "$rank" -le "$STDOUT_MAX" ]]; then
-            echo "| $rank | $phrase | $(format_number "$shows") |"
-        elif [[ "$rank" -eq $((STDOUT_MAX + 1)) ]]; then
-            echo "| ... | ... and $((total - STDOUT_MAX)) more rows in CSV | ... |"
+        if [ -z "$CSV_FILE" ] || [ "$_pe_rank" -le "$STDOUT_MAX" ]; then
+            echo "| $_pe_rank | $_pe_phrase | $(format_number "$_pe_shows") |"
+        elif [ "$_pe_rank" -eq $(($STDOUT_MAX + 1)) ]; then
+            echo "| ... | ... and $(($_pe_total - $STDOUT_MAX)) more rows in CSV | ... |"
         fi
 
         # CSV: always write all rows
-        if [[ -n "$CSV_FILE" ]]; then
+        if [ -n "$CSV_FILE" ]; then
             printf '%s%s%s%s%s%s%s\n' \
-                "$rank" "$CSV_SEP" \
-                "$(csv_escape "$phrase")" "$CSV_SEP" \
-                "$shows" "$CSV_SEP" \
-                "$type_label" >> "$CSV_FILE"
+                "$_pe_rank" "$CSV_SEP" \
+                "$(csv_escape "$_pe_phrase")" "$CSV_SEP" \
+                "$_pe_shows" "$CSV_SEP" \
+                "$_pe_type" >> "$CSV_FILE"
         fi
     done
 }
 
-# --- Parse topRequests array ---
-# Extract array between "topRequests":[ and the matching ]
-# Safe for flat arrays of {phrase, count} objects (no nested arrays)
-top_entries=$(echo "$result" | sed -n 's/.*"topRequests":\[\([^]]*\)\].*/\1/p' | head -1)
+# Parse topRequests array — extract from file, not variable
+top_entries=$(sed -n 's/.*"topRequests":\[\([^]]*\)\].*/\1/p' "$TMPFILE" | head -1)
 process_entries "$top_entries" "top"
 
-# --- Parse associations array ---
-assoc_entries=$(echo "$result" | sed -n 's/.*"associations":\[\([^]]*\)\].*/\1/p' | head -1)
+# Parse associations array
+assoc_entries=$(sed -n 's/.*"associations":\[\([^]]*\)\].*/\1/p' "$TMPFILE" | head -1)
 
-if [[ -n "$assoc_entries" ]] && echo "$assoc_entries" | grep -q '"phrase"'; then
+if [ -n "$assoc_entries" ] && printf '%s' "$assoc_entries" | grep -q '"phrase"'; then
     echo ""
     echo "=== Associations (similar queries) ==="
     echo ""
@@ -183,15 +203,9 @@ if [[ -n "$assoc_entries" ]] && echo "$assoc_entries" | grep -q '"phrase"'; then
     process_entries "$assoc_entries" "assoc"
 fi
 
-# --- Summary ---
+# Summary
 echo ""
-if [[ -n "$CSV_FILE" ]]; then
+if [ -n "$CSV_FILE" ]; then
     csv_lines=$(($(wc -l < "$CSV_FILE") - 1))
     echo "CSV exported: $CSV_FILE ($csv_lines rows, sep='$CSV_SEP')"
 fi
-
-echo ""
-echo "=== Raw JSON ==="
-echo "$result" | head -c 2000
-echo ""
-echo "[truncated if > 2000 chars]"
