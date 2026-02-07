@@ -10,6 +10,7 @@ token.txt
 .claude/hooks/security-guardian/.pytest_cache/
 
 # Codex Review
+.codex-review/
 .codex-review/state.json
 .codex-review/config.env
 .codex-review/STATUS.md
