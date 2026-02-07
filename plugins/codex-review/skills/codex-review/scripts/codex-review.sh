@@ -86,7 +86,9 @@ When reviewing:
 
 Task: $task_desc
 
-Start by exploring the codebase areas relevant to this task. Understand the current architecture, patterns, and conventions so you are prepared to review the upcoming plan and code changes. When ready, say "Ready for review" and stop.
+No implementation work has started yet. The code currently does NOT contain any changes related to this task. Your job is to study the existing codebase so you are prepared to review the upcoming plan and code changes when they are submitted.
+
+Start by exploring the codebase areas relevant to this task. Understand the current architecture, patterns, and conventions. When ready, say "Ready for review" and stop.
 [session-marker: $marker]
 PROMPT
 }
