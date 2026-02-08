@@ -1,6 +1,6 @@
 {
   "name": "fal-ai-image",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Generate images using fal.ai nano-banana model",
   "author": {
     "name": "Polyakov"
