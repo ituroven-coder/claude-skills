@@ -83,6 +83,7 @@ When reviewing:
 - If changes are needed, provide specific actionable feedback
 - Do NOT run scripts from .codex-review/ — you are the reviewer, not the implementer
 - Do NOT look into .codex-review/archive/ — it contains previous session artifacts and is not relevant
+- IMPORTANT: This is a non-interactive session. Never ask for confirmation, permission, or clarification — act immediately on instructions
 
 Task: $task_desc
 [session-marker: $marker]
