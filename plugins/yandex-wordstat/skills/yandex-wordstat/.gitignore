@@ -3,3 +3,6 @@ config/.env
 
 # Cache files (can be regenerated)
 cache/regions.json
+
+# macOS
+.DS_Store
