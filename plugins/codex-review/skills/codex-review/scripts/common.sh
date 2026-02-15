@@ -154,6 +154,10 @@ archive_previous_session() {
     local archive_dir="$state_dir/archive/$timestamp"
     mkdir -p "$archive_dir/notes"
 
+    # Generate summary.json before moving artifacts (non-critical, must not block archiving)
+    generate_archive_summary "$state_dir" "$archive_dir" "$timestamp" || \
+        echo "WARNING: Failed to generate summary.json for archive." >&2
+
     # Move artifacts
     for f in state.json verdict.txt last_response.txt STATUS.md; do
         [[ -f "$state_dir/$f" ]] && mv "$state_dir/$f" "$archive_dir/"
@@ -162,6 +166,57 @@ archive_previous_session() {
     mv "$state_dir"/notes/*.md "$archive_dir/notes/" 2>/dev/null || true
 
     echo "Previous session archived to: $archive_dir" >&2
+}
+
+# --- Generate summary.json for archive ---
+generate_archive_summary() {
+    local state_dir="$1"
+    local archive_dir="$2"
+    local archived_at="$3"
+
+    local task_desc="" session_id="" final_verdict="" last_status=""
+    local plan_iters=0 code_iters=0
+
+    # Read from state.json (still in state_dir at this point)
+    if [[ -f "$state_dir/state.json" ]]; then
+        task_desc="$(grep -o '"task_description"[[:space:]]*:[[:space:]]*"[^"]*"' "$state_dir/state.json" \
+            | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//')"
+        session_id="$(grep -o '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"' "$state_dir/state.json" \
+            | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//')"
+        last_status="$(grep -o '"last_review_status"[[:space:]]*:[[:space:]]*"[^"]*"' "$state_dir/state.json" \
+            | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//')"
+    fi
+
+    # Read final verdict
+    if [[ -f "$state_dir/verdict.txt" ]]; then
+        final_verdict="$(tr -d '[:space:]' < "$state_dir/verdict.txt")"
+    fi
+    if [[ -z "$final_verdict" ]]; then
+        final_verdict="$last_status"
+    fi
+
+    # Count review iterations from notes
+    # shellcheck disable=SC2012
+    plan_iters=$(ls "$state_dir"/notes/plan-review-*.md 2>/dev/null | wc -l)
+    # shellcheck disable=SC2012
+    code_iters=$(ls "$state_dir"/notes/code-review-*.md 2>/dev/null | wc -l)
+
+    local total_iters=$((plan_iters + code_iters))
+
+    # Escape task_desc for JSON (replace " with \", newlines with \n)
+    task_desc="$(echo "$task_desc" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')"
+
+    cat > "$archive_dir/summary.json" <<SUMMARY_EOF
+{
+  "task_description": "$task_desc",
+  "session_id": "$session_id",
+  "plan_iterations": $plan_iters,
+  "code_iterations": $code_iters,
+  "total_iterations": $total_iters,
+  "final_verdict": "$final_verdict",
+  "archived_at": "$archived_at"
+}
+SUMMARY_EOF
 }
 
 # --- Generate UUID ---

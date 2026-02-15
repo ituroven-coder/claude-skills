@@ -126,14 +126,14 @@ CODEX_SESSION_ID=sess_ваш_id
 "Используем workflow с codex ревьювером. Задачи: #23, #10"
 ```
 
-Claude создаст сессию Codex автоматически. Аргумент `init` — описание задачи. Промпт для ревьюера формируется скриптом (встроенный или кастомный через `CODEX_REVIEWER_PROMPT`).
+Claude вызывает `init` — создаётся лёгкая сессия Codex (без исследования кодовой базы). Затем `plan` и `code` отправляют ревью в эту сессию через `resume`. Промпт для ревьюера формируется скриптом (встроенный или кастомный через `CODEX_REVIEWER_PROMPT`).
 
 ### Workflow
 
-1. **Init** — Claude создает сессию Codex с описанием задачи
-2. **Plan Review** — Claude описывает план, Codex ревьюит
-3. **Implementation** — Claude обновляет фазу и реализует по плану
-4. **Code Review** — Claude описывает изменения, Codex ревьюит
+1. **Init** — Claude создаёт сессию Codex (`init`)
+2. **Plan Review** — Claude описывает план, Codex ревьюит (`plan`)
+3. **Implementation** — Claude реализует по одобренному плану
+4. **Code Review** — Claude описывает изменения, Codex ревьюит (`code`)
 5. **Done** — результат пользователю
 
 ### Управление состоянием
@@ -159,8 +159,8 @@ bash scripts/codex-state.sh set phase implementing  # Обновить фазу
 ├── last_response.txt       # gitignore — последний ответ Codex
 ├── codex-init.log          # gitignore — лог инициализации сессии
 ├── codex-{phase}-{N}.log   # gitignore — логи итераций ревью (tail -f для мониторинга)
-├── archive/                # gitignore — архив предыдущих сессий (создаётся при init)
-│   └── {timestamp}/        # артефакты одной сессии (notes, logs, state)
+├── archive/                # gitignore — архив предыдущих сессий
+│   └── {timestamp}/        # артефакты одной сессии (notes, logs, state, summary.json)
 ├── notes/                  # В GIT — журнал текущего ревью для команды
 │   ├── .gitkeep
 │   ├── plan-review-1.md
