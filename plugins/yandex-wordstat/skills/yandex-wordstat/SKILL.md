@@ -1,13 +1,13 @@
 ---
 name: yandex-wordstat
 description: |
-  Search demand analysis via Yandex Wordstat API.
-  Use when you need to: research demand, keyword analysis,
-  query frequency, seasonality or regional demand.
-  Top up to 2000 queries, associations, dynamics, CSV export.
-  Missed demand analysis: XLSX export from Yandex Direct,
-  phrase segmentation, semantic expansion, OR-query comparison.
-  Triggers: missed demand.
+  Анализ поискового спроса через Yandex Wordstat API.
+  Используй когда нужно: исследовать спрос, семантическое ядро,
+  частотность запросов, сезонность или региональный спрос.
+  Топ до 2000 запросов, ассоциации, динамика, экспорт CSV.
+  Поиск упущенного спроса: анализ XLSX-выгрузки из Яндекс Директ,
+  сегментация фраз, расширение семантики, сравнение OR-запросов.
+  Triggers: упущенный спрос.
 ---
 
 # yandex-wordstat
@@ -33,8 +33,8 @@ See `config/README.md` for token setup instructions.
 
 ### The Problem
 
-Query "kaolin wool for chimney" looks relevant for chimney seller, but:
-- People search this to BUY WOOL, not chimneys
+Query "каолиновая вата для дымохода" looks relevant for chimney seller, but:
+- People search this to BUY COTTON WOOL, not chimneys
 - They already HAVE a chimney and need insulation material
 - This is NOT a target query for chimney sales!
 
@@ -47,7 +47,10 @@ For every promising query, ASK YOURSELF:
 
 ### MANDATORY: Use WebSearch
 
-**Always run WebSearch** to check what people actually search for.
+**Always run WebSearch** to check:
+```
+WebSearch: "каолиновая вата для дымохода" что ищут покупатели
+```
 
 Look at search results:
 - What products are shown?
@@ -56,21 +59,21 @@ Look at search results:
 
 ### Red Flags (likely NOT target)
 
-- Query contains "for [your product]" — they need ACCESSORY, not your product
+- Query contains "для [вашего продукта]" — they need ACCESSORY, not your product
 - Query about materials/components — they DIY, not buy finished product
-- Query has "DIY", "how to make" — informational, not buying
+- Query has "своими руками", "как сделать" — informational, not buying
 - Query about repair/maintenance — they already own it
 
 ### Examples
 
 | Query | Looks like | Actually | Target? |
 |-------|------------|----------|---------|
-| kaolin wool for chimney | chimney buyer | wool buyer | NO |
-| buy chimney | chimney buyer | chimney buyer | YES |
-| chimney insulation | chimney buyer | insulation DIYer | NO |
-| sandwich chimney price | chimney buyer | chimney buyer | YES |
-| accident victim | lawyer client | news reader | NO |
-| lawyer after accident | lawyer client | lawyer client | YES |
+| каолиновая вата для дымохода | chimney buyer | cotton wool buyer | ❌ NO |
+| дымоход купить | chimney buyer | chimney buyer | ✅ YES |
+| утепление дымохода | chimney buyer | insulation DIYer | ❌ NO |
+| дымоход сэндвич цена | chimney buyer | chimney buyer | ✅ YES |
+| потерпевший дтп | lawyer client | news reader | ❌ NO |
+| юрист после дтп | lawyer client | lawyer client | ✅ YES |
 
 ### Workflow Update
 
@@ -85,17 +88,17 @@ Look at search results:
 
 1. **ASK user about region and WAIT for answer:**
    ```
-   "Which region should I analyze?
-   - All Russia (default)
-   - Moscow and region
-   - Specific city (which one?)"
+   "Для какого региона анализировать спрос?
+   - Вся Россия (по умолчанию)
+   - Москва и область
+   - Конкретный город (какой?)"
    ```
-   **DO NOT PROCEED until user answers!**
+   **НЕ ПРОДОЛЖАЙ пока пользователь не ответит!**
 
 2. **ASK about business goal:**
    ```
-   "What exactly do you sell/advertise?
-   This is important for filtering non-target queries."
+   "Что именно вы продаёте/рекламируете?
+   Это важно для фильтрации нецелевых запросов."
    ```
 
 ### After getting answers:
@@ -117,19 +120,19 @@ bash scripts/quota.sh
 Get top search phrases. Supports up to 2000 results and CSV export.
 ```bash
 bash scripts/top_requests.sh \
-  --phrase "query text" \
+  --phrase "юрист дтп" \
   --regions "213" \
   --devices "all"
 
 # Extended: 500 results exported to CSV
 bash scripts/top_requests.sh \
-  --phrase "query text" \
+  --phrase "юрист дтп" \
   --limit 500 \
   --csv report.csv
 
 # Max results with comma separator
 bash scripts/top_requests.sh \
-  --phrase "query text" \
+  --phrase "юрист дтп" \
   --limit 2000 \
   --csv full_report.csv \
   --sep ","
@@ -148,8 +151,8 @@ bash scripts/top_requests.sh \
 
 The output contains two sections (both in stdout and CSV):
 
-- **top** (`topRequests`) — queries that **contain the words** from your phrase, sorted by frequency. These are direct variations of the search query.
-- **assoc** (`associations`) — queries **similar by meaning** but not necessarily containing the same words, sorted by similarity. These are semantically related searches.
+- **top** (`topRequests`) — queries that **contain the words** from your phrase, sorted by frequency. These are direct variations of the search query. Example: phrase "юрист дтп" → "юрист по дтп", "консультация юриста по дтп".
+- **assoc** (`associations`) — queries **similar by meaning** but not necessarily containing the same words, sorted by similarity. These are semantically related searches. Example: phrase "юрист дтп" → "юридическая ответственность", "адвокат аварии".
 
 **For analysis:** `top` results are your primary keyword pool. `assoc` results are useful for semantic expansion but often contain noise — always verify intent before including them.
 
@@ -184,7 +187,7 @@ This approach lets the agent process large datasets without flooding stdout.
 Get search volume trends over time.
 ```bash
 bash scripts/dynamics.sh \
-  --phrase "query text" \
+  --phrase "юрист дтп" \
   --period "monthly" \
   --from-date "2025-01-01"
 ```
@@ -202,7 +205,7 @@ bash scripts/dynamics.sh \
 Get regional distribution.
 ```bash
 bash scripts/regions_stats.sh \
-  --phrase "query text" \
+  --phrase "юрист дтп" \
   --region-type "cities"
 ```
 
@@ -221,7 +224,7 @@ bash scripts/regions_tree.sh
 ### search_region.sh
 Find region ID by name.
 ```bash
-bash scripts/search_region.sh --name "Moscow"
+bash scripts/search_region.sh --name "Москва"
 ```
 
 ## Wordstat Operators
@@ -230,65 +233,66 @@ bash scripts/search_region.sh --name "Moscow"
 Shows demand ONLY for this exact phrase (no additional words).
 
 ```
-"lawyer accident" -> "lawyer accident", "lawyers accident"
-                     but NOT "lawyer for accident"
+"юрист дтп" → "юрист дтп", "юристы дтп"
+             but NOT "юрист по дтп"
 ```
 
 ### Exclamation `!word`
 Fixes exact word form.
 
 ```
-!lawyer -> "lawyer for accident", "lawyer moscow"
-           but NOT "lawyers", "lawyer's"
+!юрист → "юрист по дтп", "юрист москва"
+         but NOT "юристы", "юриста"
 ```
 
 ### Combination `"!word !word"`
 Exact phrase + exact forms.
 
 ```
-"!lawyer !for !accident" -> only "lawyer for accident"
+"!юрист !по !дтп" → only "юрист по дтп"
 ```
 
 ### Minus `-word`
 Exclude queries with this word.
 
 ```
-lawyer accident -free -consultation
+юрист дтп -бесплатно -консультация
 ```
 
 ### Grouping `(a|b|c)`
 Multiple variants in one query.
 
 ```
-(lawyer|attorney) accident -> combined demand
+(юрист|адвокат) дтп → combined demand
 ```
 
 ### Stop words
-**Always fix prepositions with `+`:**
+**Always fix prepositions with `!`:**
 
-Russian prepositions (na, v, k, za, s, po, iz, ot, do, dlya, bez, pri, pod, nad, mezhdu, cherez, ob, pered) are stop words in Wordstat — ignored without `+` operator.
-
-The `build-query` script adds `+` to stop words automatically.
+```
+юрист !по дтп    ← correct
+юрист по дтп     ← "по" ignored!
+```
 
 ## Analysis Strategy
 
-1. **Broad query**: `keyword` — see total volume
-2. **Narrow with quotes**: `"keyword"` — exact phrase only
-3. **Fix forms**: `"!keyword !preposition !modifier"` — exact match
-4. **Clean with minus**: `keyword -free -online`
+1. **Broad query**: `юрист дтп` — see total volume
+2. **Narrow with quotes**: `"юрист дтп"` — exact phrase only
+3. **Fix forms**: `"!юрист !по !дтп"` — exact match
+4. **Clean with minus**: `юрист дтп -бесплатно -онлайн`
 5. **Expand**: synonyms, related terms, client problems
 
 ## Popular Region IDs
 
 | Region | ID |
 |--------|-----|
-| Russia | 225 |
-| Moscow | 213 |
-| Moscow region | 1 |
-| Saint Petersburg | 2 |
-| Yekaterinburg | 54 |
-| Novosibirsk | 65 |
-| Kazan | 43 |
+| Россия | 225 |
+| Москва | 213 |
+| Москва и область | 1 |
+| Санкт-Петербург | 2 |
+| Екатеринбург | 54 |
+| Новосибирск | 65 |
+| Казань | 43 |
 
 Run `bash scripts/regions_tree.sh` for full list.
 
@@ -300,38 +304,38 @@ Run `bash scripts/regions_tree.sh` for full list.
 ## Example Session
 
 ```
-User: Find queries for chimney advertising
+User: Найди запросы для рекламы дымоходов
 
-Claude: Which region should I analyze?
-        And clarify - do you sell ready-made chimneys or
-        materials for construction/insulation?
+Claude: Для какого региона анализировать спрос?
+        И уточните — вы продаёте готовые дымоходы или
+        материалы для их изготовления/утепления?
 
-User: Moscow, we sell sandwich chimneys
+User: Москва, продаём готовые сэндвич-дымоходы
 
-Claude: [Runs analysis for region 213]
+Claude: [Запускает анализ для региона 213]
 
-        Found queries. Verifying intent via web search...
+        Нашёл запросы. Проверяю интент через веб-поиск...
 
-        TARGET (buying chimneys):
-        - "buy sandwich chimney" - 450 impressions
-        - "chimney for sauna price" - 380 impressions
+        ✅ ЦЕЛЕВЫЕ (покупают дымоходы):
+        - "дымоход сэндвич купить" — 450 показов
+        - "дымоход для бани цена" — 380 показов
 
-        NOT TARGET (buying something else):
-        - "kaolin wool for chimney" - looking for insulation, not chimney
-        - "chimney installation DIY" - DIY, not buyers
-        - "chimney cleaning" - already own it, service query
+        ❌ НЕ ЦЕЛЕВЫЕ (покупают другое):
+        - "каолиновая вата для дымохода" — ищут утеплитель, не дымоход
+        - "монтаж дымохода своими руками" — DIY, не покупатели
+        - "чистка дымохода" — уже владеют, сервисный запрос
 ```
 
 ### Key Points
 
-1. **ALWAYS ask about region and wait for answer**
-2. **ALWAYS clarify what the client sells**
-3. **ALWAYS verify intent via WebSearch**
-4. **Separate report into target/non-target with reasoning**
+1. **ВСЕГДА спрашивай регион и жди ответа**
+2. **ВСЕГДА уточняй что именно продаёт клиент**
+3. **ВСЕГДА проверяй интент через WebSearch**
+4. **Разделяй отчёт на целевые/нецелевые с объяснением**
 
-## Extended Scenarios
+## Расширенные сценарии
 
-### Missed Demand Analysis
-Analyze Yandex Direct campaign to find keywords not covered by current semantics.
-Requirements: XLSX export from Yandex Direct (sheet named "Texts").
-Details: [MISSED_DEMAND.md](MISSED_DEMAND.md)
+### Поиск упущенного спроса
+Анализ рекламной кампании Яндекс Директ для нахождения фраз, не покрытых текущей семантикой.
+Требования: XLSX-выгрузка из Яндекс Директ (лист «Тексты»).
+Подробнее: [MISSED_DEMAND.md](MISSED_DEMAND.md)
