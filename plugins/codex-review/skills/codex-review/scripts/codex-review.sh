@@ -102,6 +102,23 @@ For now, confirm you are ready by responding with "Ready for review".
 PROMPT
 }
 
+# --- Custom init prompt (role + user instructions) ---
+custom_init_prompt() {
+    local custom_instructions="$1"
+    local task_desc="$2"
+    local marker="$3"
+    local role
+    role="$(reviewer_role_prompt)"
+    cat <<PROMPT
+$role
+
+$custom_instructions
+
+Task: $task_desc
+[session-marker: $marker]
+PROMPT
+}
+
 # --- Extract session_id from codex output (fallback method) ---
 extract_session_id() {
     local output="$1"
@@ -292,11 +309,7 @@ cmd_init() {
     # Build reviewer prompt
     local prompt
     if [[ -n "$CODEX_REVIEWER_PROMPT" ]]; then
-        # Custom prompt — append task and marker
-        prompt="${CODEX_REVIEWER_PROMPT}
-
-Task: $task_desc
-[session-marker: $marker]"
+        prompt="$(custom_init_prompt "$CODEX_REVIEWER_PROMPT" "$task_desc" "$marker")"
     else
         prompt="$(default_reviewer_prompt "$task_desc" "$marker")"
     fi

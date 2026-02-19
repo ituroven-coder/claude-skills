@@ -100,8 +100,10 @@ CODEX_REASONING_EFFORT=high
 CODEX_MAX_ITERATIONS=5
 CODEX_YOLO=true
 
-# Custom reviewer prompt (optional, replaces built-in default)
-# CODEX_REVIEWER_PROMPT="You are a security-focused code reviewer..."
+# Custom init procedure (optional, controls what Codex does during init)
+# Reviewer role is always set automatically — this only adds init instructions.
+# Example: make Codex explore the codebase before reviews begin:
+# CODEX_REVIEWER_PROMPT="Explore the codebase areas relevant to the task. Understand the architecture, patterns, and conventions so you are prepared to review."
 ```
 
 ## Использование
@@ -126,7 +128,7 @@ CODEX_SESSION_ID=sess_ваш_id
 "Используем workflow с codex ревьювером. Задачи: #23, #10"
 ```
 
-Claude вызывает `init` — создаётся лёгкая сессия Codex (без исследования кодовой базы). Затем `plan` и `code` отправляют ревью в эту сессию через `resume`. Промпт для ревьюера формируется скриптом (встроенный или кастомный через `CODEX_REVIEWER_PROMPT`).
+Claude вызывает `init` — создаётся сессия Codex. По умолчанию init лёгкий (Codex подтверждает готовность). С `CODEX_REVIEWER_PROMPT` в config.env init выполняет кастомную процедуру (например, исследование кодовой базы). Роль ревьюера задаётся автоматически. Затем `plan` и `code` отправляют ревью в эту сессию через `resume`.
 
 ### Workflow
 

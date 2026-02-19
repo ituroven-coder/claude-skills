@@ -24,7 +24,7 @@ description: |
 
 ### 1. Инициализация сессии
 
-Создай сессию Codex с описанием задачи. Init быстрый — Codex не исследует кодовую базу, а только подтверждает готовность.
+Создай сессию Codex с описанием задачи.
 
 ```bash
 bash scripts/codex-review.sh init "Implement JWT authentication for API"
