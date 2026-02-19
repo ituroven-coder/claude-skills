@@ -266,6 +266,21 @@ Focus areas:
 - Merge readiness: is this code ready to merge as-is, or are there blockers?"
     fi
 
+    local guide=""
+    if [[ "$phase" == "plan" ]]; then
+        guide="$CODEX_PLAN_GUIDE"
+    else
+        guide="$CODEX_CODE_GUIDE"
+    fi
+
+    local guide_section=""
+    if [[ -n "$guide" ]]; then
+        guide_section="
+Additional review guidance from project maintainer:
+$guide
+"
+    fi
+
     cat <<PROMPT
 You are reviewing work by Claude Code on this project.
 Phase: $phase
@@ -274,7 +289,7 @@ Description from Claude:
 $description
 
 $phase_instructions
-
+$guide_section
 General instructions:
 - If acceptable, respond with APPROVED
 - If changes needed, provide specific actionable feedback

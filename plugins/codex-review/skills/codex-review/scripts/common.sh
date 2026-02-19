@@ -46,6 +46,8 @@ load_config() {
     CODEX_MAX_ITERATIONS="${CODEX_MAX_ITERATIONS:-5}"
     CODEX_YOLO="${CODEX_YOLO:-true}"
     CODEX_REVIEWER_PROMPT="${CODEX_REVIEWER_PROMPT:-}"
+    CODEX_PLAN_GUIDE="${CODEX_PLAN_GUIDE:-}"
+    CODEX_CODE_GUIDE="${CODEX_CODE_GUIDE:-}"
 }
 
 # --- Read a field from state.json (no jq dependency) ---

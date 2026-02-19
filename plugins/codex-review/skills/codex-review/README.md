@@ -104,6 +104,12 @@ CODEX_YOLO=true
 # Reviewer role is always set automatically — this only adds init instructions.
 # Example: make Codex explore the codebase before reviews begin:
 # CODEX_REVIEWER_PROMPT="Explore the codebase areas relevant to the task. Understand the architecture, patterns, and conventions so you are prepared to review."
+
+# Additional guidance for plan review phase (optional, appended to built-in focus areas)
+# CODEX_PLAN_GUIDE="Verify backward compatibility with API v1 clients"
+
+# Additional guidance for code review phase (optional, appended to built-in focus areas)
+# CODEX_CODE_GUIDE="Check that all DB queries use parameterized statements"
 ```
 
 ## Использование
