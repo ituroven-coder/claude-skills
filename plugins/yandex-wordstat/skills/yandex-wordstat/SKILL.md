@@ -1,6 +1,13 @@
 ---
 name: yandex-wordstat
-description: Analyze search demand via Yandex Wordstat API
+description: |
+  Анализ поискового спроса через Yandex Wordstat API.
+  Используй когда нужно: исследовать спрос, семантическое ядро,
+  частотность запросов, сезонность или региональный спрос.
+  Топ до 2000 запросов, ассоциации, динамика, экспорт CSV.
+  Поиск упущенного спроса: анализ XLSX-выгрузки из Яндекс Директ,
+  сегментация фраз, расширение семантики, сравнение OR-запросов.
+  Triggers: упущенный спрос.
 ---
 
 # yandex-wordstat
@@ -110,12 +117,25 @@ bash scripts/quota.sh
 ```
 
 ### top_requests.sh
-Get top search phrases.
+Get top search phrases. Supports up to 2000 results and CSV export.
 ```bash
 bash scripts/top_requests.sh \
   --phrase "юрист дтп" \
   --regions "213" \
   --devices "all"
+
+# Extended: 500 results exported to CSV
+bash scripts/top_requests.sh \
+  --phrase "юрист дтп" \
+  --limit 500 \
+  --csv report.csv
+
+# Max results with comma separator
+bash scripts/top_requests.sh \
+  --phrase "юрист дтп" \
+  --limit 2000 \
+  --csv full_report.csv \
+  --sep ","
 ```
 
 | Param | Required | Default | Values |
@@ -123,6 +143,45 @@ bash scripts/top_requests.sh \
 | `--phrase` | yes | - | text with operators |
 | `--regions` | no | all | comma-separated IDs |
 | `--devices` | no | all | all, desktop, phone, tablet |
+| `--limit` | no | API default (50) | 1-2000 (maps to API numPhrases) |
+| `--csv` | no | - | path to output CSV file |
+| `--sep` | no | ; | CSV separator (; for RU Excel) |
+
+#### Result types: Top Requests vs Associations
+
+The output contains two sections (both in stdout and CSV):
+
+- **top** (`topRequests`) — queries that **contain the words** from your phrase, sorted by frequency. These are direct variations of the search query. Example: phrase "юрист дтп" → "юрист по дтп", "консультация юриста по дтп".
+- **assoc** (`associations`) — queries **similar by meaning** but not necessarily containing the same words, sorted by similarity. These are semantically related searches. Example: phrase "юрист дтп" → "юридическая ответственность", "адвокат аварии".
+
+**For analysis:** `top` results are your primary keyword pool. `assoc` results are useful for semantic expansion but often contain noise — always verify intent before including them.
+
+#### CSV export details
+
+CSV format: UTF-8 with BOM, columns: `n;phrase;impressions;type`.
+When `--csv` is set, stdout shows first 20 rows per section; full data goes to file.
+
+#### Working with large CSV exports
+
+When `--limit` is set to a high value (e.g. 500-2000), use CSV export and read the file in chunks:
+```bash
+# Export 2000 results
+bash scripts/top_requests.sh --phrase "query" --limit 2000 --csv data.csv
+
+# Read first 50 rows (header + data)
+head -n 51 data.csv
+
+# Read rows 51-100
+tail -n +52 data.csv | head -50
+
+# Count total rows
+wc -l < data.csv
+
+# Filter only associations
+grep ";assoc$" data.csv
+```
+
+This approach lets the agent process large datasets without flooding stdout.
 
 ### dynamics.sh
 Get search volume trends over time.
@@ -273,3 +332,10 @@ Claude: [Запускает анализ для региона 213]
 2. **ВСЕГДА уточняй что именно продаёт клиент**
 3. **ВСЕГДА проверяй интент через WebSearch**
 4. **Разделяй отчёт на целевые/нецелевые с объяснением**
+
+## Расширенные сценарии
+
+### Поиск упущенного спроса
+Анализ рекламной кампании Яндекс Директ для нахождения фраз, не покрытых текущей семантикой.
+Требования: XLSX-выгрузка из Яндекс Директ (лист «Тексты»).
+Подробнее: [MISSED_DEMAND.md](references/MISSED_DEMAND.md)
