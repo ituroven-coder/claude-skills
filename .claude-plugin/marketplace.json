@@ -54,6 +54,12 @@
       "description": "Анализ поискового спроса через Yandex Wordstat API",
       "source": "./plugins/yandex-wordstat",
       "category": "productivity"
+    },
+    {
+      "name": "yandex-search-api",
+      "description": "Парсинг выдачи Яндекса через Yandex Cloud Search API v2 (sync + async)",
+      "source": "./plugins/yandex-search-api",
+      "category": "productivity"
     }
   ]
 }

@@ -17,6 +17,7 @@
 /plugin install genome-analizer
 /plugin install ssh-remote-connection
 /plugin install yandex-wordstat
+/plugin install yandex-search-api
 /plugin install codex-review
 /plugin install fal-ai-image
 ```
@@ -196,6 +197,26 @@ SSH подключение к удалённым серверам с agent forwa
 
 ---
 
+### [yandex-search-api](plugins/yandex-search-api/skills/yandex-search-api)
+
+Парсинг выдачи Яндекса через Yandex Cloud Search API v2.
+
+- Синхронный и асинхронный режимы поиска
+- Авторизация через IAM token (JWT PS256 из Service Account Key)
+- Парсинг SERP: позиция, заголовок, URL, сниппет
+- Кэширование результатов и резюмируемый async
+
+**Триггеры (RU):**
+- "поиск в яндексе"
+- "выдача яндекса по запросу"
+- "парсинг выдачи"
+
+**Триггеры (EN):**
+- "yandex search api"
+- "parse yandex serp"
+
+---
+
 ## Структура репозитория
 
 ```
@@ -210,7 +231,8 @@ polyakov-claude-skills/
 │   ├── ssh-remote-connection/# Плагин для SSH
 │   ├── yandex-wordstat/      # Плагин для Wordstat API
 │   ├── codex-review/         # Плагин для кросс-агентного ревью
-│   └── fal-ai-image/         # Плагин для генерации изображений
+│   ├── fal-ai-image/         # Плагин для генерации изображений
+│   └── yandex-search-api/    # Плагин для Yandex Search API
 └── README.md
 ```
 
