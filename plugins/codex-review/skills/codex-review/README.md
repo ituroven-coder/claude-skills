@@ -100,8 +100,16 @@ CODEX_REASONING_EFFORT=high
 CODEX_MAX_ITERATIONS=5
 CODEX_YOLO=true
 
-# Custom reviewer prompt (optional, replaces built-in default)
-# CODEX_REVIEWER_PROMPT="You are a security-focused code reviewer..."
+# Custom init procedure (optional, controls what Codex does during init)
+# Reviewer role is always set automatically — this only adds init instructions.
+# Example: make Codex explore the codebase before reviews begin:
+# CODEX_REVIEWER_PROMPT="Explore the codebase areas relevant to the task. Understand the architecture, patterns, and conventions so you are prepared to review."
+
+# Additional guidance for plan review phase (optional, appended to built-in focus areas)
+# CODEX_PLAN_GUIDE="Verify backward compatibility with API v1 clients"
+
+# Additional guidance for code review phase (optional, appended to built-in focus areas)
+# CODEX_CODE_GUIDE="Check that all DB queries use parameterized statements"
 ```
 
 ## Использование
@@ -126,14 +134,14 @@ CODEX_SESSION_ID=sess_ваш_id
 "Используем workflow с codex ревьювером. Задачи: #23, #10"
 ```
 
-Claude создаст сессию Codex автоматически. Аргумент `init` — описание задачи. Промпт для ревьюера формируется скриптом (встроенный или кастомный через `CODEX_REVIEWER_PROMPT`).
+Claude вызывает `init` — создаётся сессия Codex. По умолчанию init лёгкий (Codex подтверждает готовность). С `CODEX_REVIEWER_PROMPT` в config.env init выполняет кастомную процедуру (например, исследование кодовой базы). Роль ревьюера задаётся автоматически. Затем `plan` и `code` отправляют ревью в эту сессию через `resume`.
 
 ### Workflow
 
-1. **Init** — Claude создает сессию Codex с описанием задачи
-2. **Plan Review** — Claude описывает план, Codex ревьюит
-3. **Implementation** — Claude обновляет фазу и реализует по плану
-4. **Code Review** — Claude описывает изменения, Codex ревьюит
+1. **Init** — Claude создаёт сессию Codex (`init`)
+2. **Plan Review** — Claude описывает план, Codex ревьюит (`plan`)
+3. **Implementation** — Claude реализует по одобренному плану
+4. **Code Review** — Claude описывает изменения, Codex ревьюит (`code`)
 5. **Done** — результат пользователю
 
 ### Управление состоянием
@@ -159,8 +167,8 @@ bash scripts/codex-state.sh set phase implementing  # Обновить фазу
 ├── last_response.txt       # gitignore — последний ответ Codex
 ├── codex-init.log          # gitignore — лог инициализации сессии
 ├── codex-{phase}-{N}.log   # gitignore — логи итераций ревью (tail -f для мониторинга)
-├── archive/                # gitignore — архив предыдущих сессий (создаётся при init)
-│   └── {timestamp}/        # артефакты одной сессии (notes, logs, state)
+├── archive/                # gitignore — архив предыдущих сессий
+│   └── {timestamp}/        # артефакты одной сессии (notes, logs, state, summary.json)
 ├── notes/                  # В GIT — журнал текущего ревью для команды
 │   ├── .gitkeep
 │   ├── plan-review-1.md

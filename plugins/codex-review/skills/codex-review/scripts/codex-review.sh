@@ -62,11 +62,9 @@ if [[ "$CODEX_YOLO" == "true" ]]; then
     YOLO_FLAG=("--yolo")
 fi
 
-# --- Default reviewer prompt ---
-default_reviewer_prompt() {
-    local task_desc="$1"
-    local marker="$2"
-    cat <<PROMPT
+# --- Reviewer role prompt (reusable base) ---
+reviewer_role_prompt() {
+    cat <<'ROLE'
 You are a code reviewer for this project.
 You will review plans and code changes submitted by another AI agent (Claude Code).
 
@@ -84,12 +82,39 @@ When reviewing:
 - Do NOT run scripts from .codex-review/ — you are the reviewer, not the implementer
 - Do NOT look into .codex-review/archive/ — it contains previous session artifacts and is not relevant
 - IMPORTANT: This is a non-interactive session. Never ask for confirmation, permission, or clarification — act immediately on instructions
+ROLE
+}
+
+# --- Default reviewer prompt for init ---
+default_reviewer_prompt() {
+    local task_desc="$1"
+    local marker="$2"
+    local role
+    role="$(reviewer_role_prompt)"
+    cat <<PROMPT
+$role
 
 Task: $task_desc
 
-No implementation work has started yet. The code currently does NOT contain any changes related to this task. Your job is to study the existing codebase so you are prepared to review the upcoming plan and code changes when they are submitted.
+This message sets up your reviewer role. Plan and code reviews will arrive as follow-up messages — you will inspect the codebase then.
+For now, confirm you are ready by responding with "Ready for review".
+[session-marker: $marker]
+PROMPT
+}
 
-Start by exploring the codebase areas relevant to this task. Understand the current architecture, patterns, and conventions. When ready, say "Ready for review" and stop.
+# --- Custom init prompt (role + user instructions) ---
+custom_init_prompt() {
+    local custom_instructions="$1"
+    local task_desc="$2"
+    local marker="$3"
+    local role
+    role="$(reviewer_role_prompt)"
+    cat <<PROMPT
+$role
+
+$custom_instructions
+
+Task: $task_desc
 [session-marker: $marker]
 PROMPT
 }
@@ -103,6 +128,32 @@ extract_session_id() {
         sid=$(echo "$output" | grep -oE '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}' | head -1)
     fi
     echo "$sid"
+}
+
+# --- Extract session_id from log or marker, exit on failure ---
+resolve_new_session_id() {
+    local marker="$1"
+    local log_file="$2"
+
+    local new_session_id
+    new_session_id="$(find_session_by_marker "$marker")"
+
+    if [[ -z "$new_session_id" ]]; then
+        echo "Marker search failed, trying log regex..." >&2
+        new_session_id="$(extract_session_id "$(cat "$log_file" 2>/dev/null)")"
+    fi
+
+    if [[ -z "$new_session_id" ]]; then
+        echo "WARNING: Could not extract session_id." >&2
+        echo "Log from codex:" >&2
+        cat "$log_file" >&2
+        echo "" >&2
+        echo "Please set session_id manually:" >&2
+        echo "  bash codex-state.sh set session_id <YOUR_SESSION_ID>" >&2
+        exit 1
+    fi
+
+    echo "$new_session_id"
 }
 
 # --- Read verdict from file, fallback to text parsing ---
@@ -184,6 +235,73 @@ print_result() {
     echo "Status: $status"
 }
 
+# --- Build phase-specific prompt ---
+build_review_prompt() {
+    local phase="$1"
+    local description="$2"
+    local skill_path
+    skill_path="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+    local phase_instructions
+    if [[ "$phase" == "plan" ]]; then
+        phase_instructions="You are reviewing a proposed implementation plan.
+
+Focus areas:
+- Correctness: does the approach solve the stated problem?
+- Completeness: are requirements and edge cases covered?
+- Architecture: are there risks or better alternatives?
+- Scope: not too broad, not too narrow?
+- Clarity: is the implementation strategy clear and unambiguous?
+- Readiness: is the plan specific enough to start coding — are there gaps, undefined decisions, or missing details that would block implementation?"
+    else
+        phase_instructions="You are reviewing code changes against the previously approved plan.
+
+Focus areas:
+- Plan adherence: does the implementation match the approved plan? Note any deviations or missing parts
+- Correctness: bugs, edge cases, off-by-one errors
+- Security: injection, auth, data exposure vulnerabilities
+- Error handling: failure modes, missing validations
+- Code quality: readability, maintainability, naming, structure
+- Tests: are critical paths covered? Are tests meaningful, not just nominal?
+- Merge readiness: is this code ready to merge as-is, or are there blockers?"
+    fi
+
+    local guide=""
+    if [[ "$phase" == "plan" ]]; then
+        guide="$CODEX_PLAN_GUIDE"
+    else
+        guide="$CODEX_CODE_GUIDE"
+    fi
+
+    local guide_section=""
+    if [[ -n "$guide" ]]; then
+        guide_section="
+Additional review guidance from project maintainer:
+$guide
+"
+    fi
+
+    cat <<PROMPT
+You are reviewing work by Claude Code on this project.
+Phase: $phase
+
+Description from Claude:
+$description
+
+$phase_instructions
+$guide_section
+General instructions:
+- If acceptable, respond with APPROVED
+- If changes needed, provide specific actionable feedback
+- You can inspect the code yourself — you're in the same directory
+- The codex-review skill is at: $skill_path
+
+After your review, write your verdict to $STATE_DIR/verdict.txt
+Write exactly one word: APPROVED or CHANGES_REQUESTED
+The directory exists. The file is cleared before each review — always create it fresh.
+PROMPT
+}
+
 # =====================
 # COMMAND: init
 # =====================
@@ -206,11 +324,7 @@ cmd_init() {
     # Build reviewer prompt
     local prompt
     if [[ -n "$CODEX_REVIEWER_PROMPT" ]]; then
-        # Custom prompt — append task and marker
-        prompt="${CODEX_REVIEWER_PROMPT}
-
-Task: $task_desc
-[session-marker: $marker]"
+        prompt="$(custom_init_prompt "$CODEX_REVIEWER_PROMPT" "$task_desc" "$marker")"
     else
         prompt="$(default_reviewer_prompt "$task_desc" "$marker")"
     fi
@@ -231,29 +345,8 @@ Task: $task_desc
         exit 1
     }
 
-    local output
-    output=$(cat "$output_file" 2>/dev/null || echo "")
-
-    # Extract session_id: marker search → stdout regex → manual
-    local new_session_id
-    new_session_id="$(find_session_by_marker "$marker")"
-
-    if [[ -z "$new_session_id" ]]; then
-        echo "Marker search failed, trying stdout regex..." >&2
-        new_session_id="$(extract_session_id "$(cat "$log_file" 2>/dev/null)")"
-    fi
-
-    if [[ -z "$new_session_id" ]]; then
-        echo "WARNING: Could not extract session_id." >&2
-        echo "Log from codex:" >&2
-        cat "$log_file" >&2
-        echo "" >&2
-        echo "Please set session_id manually:" >&2
-        echo "  bash codex-state.sh set session_id <YOUR_SESSION_ID>" >&2
-        exit 1
-    fi
-
-    SESSION_ID="$new_session_id"
+    # Extract session_id
+    SESSION_ID="$(resolve_new_session_id "$marker" "$log_file")"
 
     write_state "{
   \"session_id\": \"$SESSION_ID\",
@@ -326,51 +419,8 @@ cmd_review() {
         exit 2
     fi
 
-    # Build phase-specific prompt for Codex
-    local skill_path
-    skill_path="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-    local phase_instructions
-    if [[ "$phase" == "plan" ]]; then
-        phase_instructions="You are reviewing a proposed implementation plan.
-
-Focus areas:
-- Correctness: does the approach solve the stated problem?
-- Completeness: are requirements and edge cases covered?
-- Architecture: are there risks or better alternatives?
-- Scope: not too broad, not too narrow?
-- Clarity: is the implementation strategy clear and unambiguous?
-- Readiness: is the plan specific enough to start coding — are there gaps, undefined decisions, or missing details that would block implementation?"
-    else
-        phase_instructions="You are reviewing code changes against the previously approved plan.
-
-Focus areas:
-- Plan adherence: does the implementation match the approved plan? Note any deviations or missing parts
-- Correctness: bugs, edge cases, off-by-one errors
-- Security: injection, auth, data exposure vulnerabilities
-- Error handling: failure modes, missing validations
-- Code quality: readability, maintainability, naming, structure
-- Tests: are critical paths covered? Are tests meaningful, not just nominal?
-- Merge readiness: is this code ready to merge as-is, or are there blockers?"
-    fi
-
-    local codex_prompt="You are reviewing work by Claude Code on this project.
-Phase: $phase
-
-Description from Claude:
-$DESCRIPTION
-
-$phase_instructions
-
-General instructions:
-- If acceptable, respond with APPROVED
-- If changes needed, provide specific actionable feedback
-- You can inspect the code yourself — you're in the same directory
-- The codex-review skill is at: $skill_path
-
-After your review, write your verdict to $STATE_DIR/verdict.txt
-Write exactly one word: APPROVED or CHANGES_REQUESTED
-The directory exists. The file is cleared before each review — always create it fresh."
+    local codex_prompt
+    codex_prompt="$(build_review_prompt "$phase" "$DESCRIPTION")"
 
     # Clean previous verdict before calling codex
     rm -f "$STATE_DIR/verdict.txt"
