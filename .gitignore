@@ -19,3 +19,6 @@ __pycache__/
 .codex-review/last_response.txt
 .codex-review/codex-*.log
 .codex-review/archive/
+
+# Local packaged plugin artifacts
+plugins/telegraph-publisher/skills/*.zip
