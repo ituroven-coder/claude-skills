@@ -72,6 +72,12 @@
       "description": "Publish pages to Telegraph with images, YouTube embeds, and diagrams",
       "source": "./plugins/telegraph-publisher",
       "category": "productivity"
+    },
+    {
+      "name": "yandex-webmaster",
+      "description": "Yandex Webmaster API: управление сайтами, индексация, поисковые запросы, переобход",
+      "source": "./plugins/yandex-webmaster",
+      "category": "productivity"
     }
   ]
 }
