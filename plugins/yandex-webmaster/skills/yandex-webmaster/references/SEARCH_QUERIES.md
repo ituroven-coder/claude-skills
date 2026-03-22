@@ -18,6 +18,8 @@ bash scripts/popular_queries.sh --host example.com --order-by TOTAL_CLICKS --lim
 
 ## История запросов
 
+> По умолчанию запрашиваются последние 90 дней. Для другого диапазона укажите `--date-from` явно.
+
 ### Агрегат по всем запросам
 
 ```bash

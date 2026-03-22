@@ -1,6 +1,7 @@
 #!/bin/sh
 # SQI (Site Quality Index) history
 # Usage: sqi_history.sh --host <domain> [--date-from YYYY-MM-DD] [--date-to YYYY-MM-DD]
+# Defaults to last 90 days if --date-from is not specified.
 
 set -e
 
@@ -9,6 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 load_config
 
 parse_host_params "$@"
+apply_default_dates
 ensure_user_id
 resolve_host
 require_host
@@ -16,7 +18,6 @@ require_host
 TMPFILE="${WM_TMPDIR}/wm_sqi_$$.json"
 trap 'rm -f "$TMPFILE"' EXIT
 
-# Parse points array
 _host_dir=$(cache_host_dir)
 _out_file="$_host_dir/sqi_history.tsv"
 

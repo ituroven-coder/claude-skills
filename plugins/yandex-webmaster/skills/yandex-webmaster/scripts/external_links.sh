@@ -2,6 +2,7 @@
 # External links — samples and history
 # Usage: external_links.sh --host <domain> --action samples|history
 #        [--date-from] [--date-to] [--limit N] [--offset N]
+# History defaults to last 90 days if --date-from is not specified.
 
 set -e
 
@@ -47,6 +48,7 @@ case "$ACTION" in
         ;;
 
     history)
+        apply_default_dates
         _host_dir=$(cache_host_dir)
         mkdir -p "$_host_dir/links"
         _hash=$(cache_key "ext_links_history_${DATE_FROM}_${DATE_TO}")

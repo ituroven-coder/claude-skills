@@ -131,7 +131,7 @@ bash scripts/<script>.sh --host <domain> [--action <action>] [params...]
 | `--host <domain>` | Домен/URL сайта (поиск по hosts.tsv) |
 | `--host-id <id>` | Прямой host_id (формат: `http:example.com:80`) |
 | `--action <act>` | Подкоманда скрипта |
-| `--date-from` | Начало периода YYYY-MM-DD |
+| `--date-from` | Начало периода YYYY-MM-DD (history: default 90 дней назад) |
 | `--date-to` | Конец периода YYYY-MM-DD |
 | `--limit N` | Число записей |
 | `--offset N` | Смещение |

@@ -3,6 +3,7 @@
 # Usage: internal_links.sh --host <domain> --action samples|history
 #        [--indicator SITE_ERROR|DISALLOWED_BY_USER|UNSUPPORTED_BY_ROBOT]
 #        [--date-from] [--date-to] [--limit N] [--offset N]
+# History defaults to last 90 days if --date-from is not specified.
 
 set -e
 
@@ -61,12 +62,12 @@ case "$ACTION" in
         ;;
 
     history)
+        apply_default_dates
         _host_dir=$(cache_host_dir)
         mkdir -p "$_host_dir/links"
         _hash=$(cache_key "int_links_history_${DATE_FROM}_${DATE_TO}")
         _out_file="$_host_dir/links/internal_history_${_hash}.tsv"
 
-        # TTL cache check (24h)
         if [ -z "$NO_CACHE" ] && cache_get_ttl "$_out_file" 1440; then
             print_tsv_head "$_out_file" 30
             echo ""
@@ -85,26 +86,37 @@ case "$ACTION" in
         # shellcheck disable=SC2086
         webmaster_get "/links/internal/broken/history" $_curl_args > "$TMPFILE"
 
-        # Grep from file, not variable
         tr -d '\n\r' < "$TMPFILE" > "${TMPFILE}.flat"
-        _tdbu="${WM_TMPDIR}/wm_il_dbu_$$.txt"
-        _tse="${WM_TMPDIR}/wm_il_se_$$.txt"
-        _tubr="${WM_TMPDIR}/wm_il_ubr_$$.txt"
+        _tdbu="${WM_TMPDIR}/wm_il_dbu_$$.tsv"
+        _tse="${WM_TMPDIR}/wm_il_se_$$.tsv"
+        _tubr="${WM_TMPDIR}/wm_il_ubr_$$.tsv"
         trap 'rm -f "$TMPFILE" "${TMPFILE}.flat" "$_tdbu" "$_tse" "$_tubr"' EXIT
 
-        grep -o '"DISALLOWED_BY_USER"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_tdbu"
-        grep -o '"SITE_ERROR"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_tse"
-        grep -o '"UNSUPPORTED_BY_ROBOT"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_tubr"
+        _extract_indicator() {
+            grep -o "\"$1\"[[:space:]]*:\[[^]]*\]" "$2" | head -1 | \
+                grep -o '"date":"[^"]*","value":[0-9]*' | \
+                sed 's/"date":"//;s/","value":/\t/' | cut -c1-10,11- > "$3"
+        }
+        _extract_indicator "SITE_ERROR" "${TMPFILE}.flat" "$_tse"
+        _extract_indicator "DISALLOWED_BY_USER" "${TMPFILE}.flat" "$_tdbu"
+        _extract_indicator "UNSUPPORTED_BY_ROBOT" "${TMPFILE}.flat" "$_tubr"
 
         {
             echo "date	site_error	disallowed_by_user	unsupported_by_robot"
-            grep -o '"date":"[^"]*","value":[0-9]*' "$_tse" | while IFS= read -r _match; do
-                _date=$(printf '%s' "$_match" | sed 's/.*"date":"//;s/".*//' | cut -c1-10)
-                _vse=$(printf '%s' "$_match" | sed 's/.*"value"://')
-                _vdbu=$(grep -o "\"$_date[^\"]*\",\"value\":[0-9]*" "$_tdbu" | head -1 | sed 's/.*"value"://')
-                _vubr=$(grep -o "\"$_date[^\"]*\",\"value\":[0-9]*" "$_tubr" | head -1 | sed 's/.*"value"://')
-                printf '%s\t%s\t%s\t%s\n' "$_date" "${_vse:-0}" "${_vdbu:-0}" "${_vubr:-0}"
-            done
+            _tdates="${WM_TMPDIR}/wm_il_dates_$$.txt"
+            cut -f1 "$_tse" "$_tdbu" "$_tubr" | sort -u > "$_tdates"
+            awk -F'\t' '
+                FILENAME == ARGV[1] { se[$1]=$2; next }
+                FILENAME == ARGV[2] { dbu[$1]=$2; next }
+                FILENAME == ARGV[3] { ubr[$1]=$2; next }
+                {
+                    d=$1
+                    printf "%s\t%s\t%s\t%s\n", d, \
+                        (d in se ? se[d] : 0), (d in dbu ? dbu[d] : 0), \
+                        (d in ubr ? ubr[d] : 0)
+                }
+            ' "$_tse" "$_tdbu" "$_tubr" "$_tdates"
+            rm -f "$_tdates"
         } > "$_out_file"
 
         print_tsv_head "$_out_file" 30
