@@ -2,6 +2,7 @@
 # Pages in search — history and samples
 # Usage: insearch.sh --host <domain> --action history|samples
 #        [--date-from] [--date-to] [--limit N] [--offset N]
+# History defaults to last 90 days if --date-from is not specified.
 
 set -e
 
@@ -20,6 +21,7 @@ trap 'rm -f "$TMPFILE"' EXIT
 
 case "$ACTION" in
     history)
+        apply_default_dates
         _host_dir=$(cache_host_dir)
         mkdir -p "$_host_dir/insearch"
         _hash=$(cache_key "insearch_history_${DATE_FROM}_${DATE_TO}")

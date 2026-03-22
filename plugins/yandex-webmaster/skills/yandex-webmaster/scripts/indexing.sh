@@ -2,6 +2,7 @@
 # Indexing history and samples
 # Usage: indexing.sh --host <domain> --action history|samples
 #        [--date-from] [--date-to] [--limit N] [--offset N]
+# History defaults to last 90 days if --date-from is not specified.
 
 set -e
 
@@ -20,6 +21,7 @@ trap 'rm -f "$TMPFILE"' EXIT
 
 case "$ACTION" in
     history)
+        apply_default_dates
         _host_dir=$(cache_host_dir)
         mkdir -p "$_host_dir/indexing"
         _hash=$(cache_key "indexing_history_${DATE_FROM}_${DATE_TO}")
@@ -44,35 +46,50 @@ case "$ACTION" in
         # shellcheck disable=SC2086
         webmaster_get "/indexing/history" $_curl_args > "$TMPFILE"
 
-        # Flatten JSON to one line for reliable grep
+        # Flatten JSON, extract each indicator to date<TAB>value TSV, merge with awk
         tr -d '\n\r' < "$TMPFILE" > "${TMPFILE}.flat"
 
-        # Extract each indicator array into its own temp file
-        _t2="${WM_TMPDIR}/wm_idx_2xx_$$.txt"
-        _t3="${WM_TMPDIR}/wm_idx_3xx_$$.txt"
-        _t4="${WM_TMPDIR}/wm_idx_4xx_$$.txt"
-        _t5="${WM_TMPDIR}/wm_idx_5xx_$$.txt"
-        _to="${WM_TMPDIR}/wm_idx_oth_$$.txt"
+        _t2="${WM_TMPDIR}/wm_idx_2xx_$$.tsv"
+        _t3="${WM_TMPDIR}/wm_idx_3xx_$$.tsv"
+        _t4="${WM_TMPDIR}/wm_idx_4xx_$$.tsv"
+        _t5="${WM_TMPDIR}/wm_idx_5xx_$$.tsv"
+        _to="${WM_TMPDIR}/wm_idx_oth_$$.tsv"
         trap 'rm -f "$TMPFILE" "${TMPFILE}.flat" "$_t2" "$_t3" "$_t4" "$_t5" "$_to"' EXIT
 
-        grep -o '"HTTP_2XX"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_t2"
-        grep -o '"HTTP_3XX"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_t3"
-        grep -o '"HTTP_4XX"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_t4"
-        grep -o '"HTTP_5XX"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_t5"
-        grep -o '"OTHER"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_to"
+        # Extract date<TAB>value for each indicator (one grep + sed per indicator)
+        _extract_indicator() {
+            grep -o "\"$1\"[[:space:]]*:\[[^]]*\]" "$2" | head -1 | \
+                grep -o '"date":"[^"]*","value":[0-9]*' | \
+                sed 's/"date":"//;s/","value":/\t/' | cut -c1-10,11- > "$3"
+        }
+        _extract_indicator "HTTP_2XX" "${TMPFILE}.flat" "$_t2"
+        _extract_indicator "HTTP_3XX" "${TMPFILE}.flat" "$_t3"
+        _extract_indicator "HTTP_4XX" "${TMPFILE}.flat" "$_t4"
+        _extract_indicator "HTTP_5XX" "${TMPFILE}.flat" "$_t5"
+        _extract_indicator "OTHER" "${TMPFILE}.flat" "$_to"
+
+        # Merge all indicators by date: sorted date list + awk lookup (O(n), portable)
+        _tdates="${WM_TMPDIR}/wm_idx_dates_$$.txt"
+        cut -f1 "$_t2" "$_t3" "$_t4" "$_t5" "$_to" | sort -u > "$_tdates"
 
         {
             echo "date	2xx	3xx	4xx	5xx	other"
-            grep -o '"date":"[^"]*","value":[0-9]*' "$_t2" | while IFS= read -r _match; do
-                _date=$(printf '%s' "$_match" | sed 's/.*"date":"//;s/".*//' | cut -c1-10)
-                _v2=$(printf '%s' "$_match" | sed 's/.*"value"://')
-                _v3=$(grep -o "\"$_date[^\"]*\",\"value\":[0-9]*" "$_t3" | head -1 | sed 's/.*"value"://')
-                _v4=$(grep -o "\"$_date[^\"]*\",\"value\":[0-9]*" "$_t4" | head -1 | sed 's/.*"value"://')
-                _v5=$(grep -o "\"$_date[^\"]*\",\"value\":[0-9]*" "$_t5" | head -1 | sed 's/.*"value"://')
-                _vo=$(grep -o "\"$_date[^\"]*\",\"value\":[0-9]*" "$_to" | head -1 | sed 's/.*"value"://')
-                printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$_date" "${_v2:-0}" "${_v3:-0}" "${_v4:-0}" "${_v5:-0}" "${_vo:-0}"
-            done
+            awk -F'\t' '
+                FILENAME == ARGV[1] { v2[$1]=$2; next }
+                FILENAME == ARGV[2] { v3[$1]=$2; next }
+                FILENAME == ARGV[3] { v4[$1]=$2; next }
+                FILENAME == ARGV[4] { v5[$1]=$2; next }
+                FILENAME == ARGV[5] { vo[$1]=$2; next }
+                {
+                    d=$1
+                    printf "%s\t%s\t%s\t%s\t%s\t%s\n", d, \
+                        (d in v2 ? v2[d] : 0), (d in v3 ? v3[d] : 0), \
+                        (d in v4 ? v4[d] : 0), (d in v5 ? v5[d] : 0), \
+                        (d in vo ? vo[d] : 0)
+                }
+            ' "$_t2" "$_t3" "$_t4" "$_t5" "$_to" "$_tdates"
         } > "$_out_file"
+        rm -f "$_tdates"
 
         print_tsv_head "$_out_file" 30
         echo ""

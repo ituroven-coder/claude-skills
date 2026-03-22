@@ -330,6 +330,68 @@ print_tsv_head() {
     fi
 }
 
+# --------------- Date helpers ---------------
+
+# date_subtract_days <YYYY-MM-DD> <days>
+# Returns date N days before the given date. POSIX-compatible.
+date_subtract_days() {
+    _dsd_base="$1"
+    _dsd_days="$2"
+    # Try macOS date first, then GNU date
+    if date -v-1d +%Y-%m-%d >/dev/null 2>&1; then
+        date -j -f "%Y-%m-%d" "$_dsd_base" -v-"${_dsd_days}d" +%Y-%m-%d 2>/dev/null && return 0
+    fi
+    if date -d "$_dsd_base - $_dsd_days days" +%Y-%m-%d 2>/dev/null; then
+        return 0
+    fi
+    # Pure shell fallback: subtract days via simple month/day arithmetic
+    # Good enough for 90-day ranges
+    _dsd_y=$(echo "$_dsd_base" | cut -d- -f1)
+    _dsd_m=$(echo "$_dsd_base" | cut -d- -f2 | sed 's/^0//')
+    _dsd_d=$(echo "$_dsd_base" | cut -d- -f3 | sed 's/^0//')
+    _dsd_remain="$_dsd_days"
+    while [ "$_dsd_remain" -gt 0 ]; do
+        if [ "$_dsd_d" -gt "$_dsd_remain" ]; then
+            _dsd_d=$(( _dsd_d - _dsd_remain ))
+            _dsd_remain=0
+        else
+            _dsd_remain=$(( _dsd_remain - _dsd_d ))
+            _dsd_m=$(( _dsd_m - 1 ))
+            if [ "$_dsd_m" -lt 1 ]; then
+                _dsd_m=12
+                _dsd_y=$(( _dsd_y - 1 ))
+            fi
+            # Days in the new month
+            case "$_dsd_m" in
+                1|3|5|7|8|10|12) _dsd_d=31 ;;
+                4|6|9|11) _dsd_d=30 ;;
+                2) if [ $(( _dsd_y % 4 )) -eq 0 ] && { [ $(( _dsd_y % 100 )) -ne 0 ] || [ $(( _dsd_y % 400 )) -eq 0 ]; }; then _dsd_d=29; else _dsd_d=28; fi ;;
+            esac
+        fi
+    done
+    printf '%04d-%02d-%02d\n' "$_dsd_y" "$_dsd_m" "$_dsd_d"
+}
+
+# default_date_from [reference_date]
+# Returns date 90 days before reference_date (default: today)
+default_date_from() {
+    _ddf_ref="${1:-$(date +%Y-%m-%d)}"
+    date_subtract_days "$_ddf_ref" 90
+}
+
+# apply_default_dates — sets DATE_FROM if empty (for history scripts)
+# If --date-to is set but --date-from is not: DATE_FROM = DATE_TO - 90 days
+# If neither is set: DATE_FROM = today - 90 days
+apply_default_dates() {
+    if [ -z "$DATE_FROM" ]; then
+        if [ -n "$DATE_TO" ]; then
+            DATE_FROM=$(default_date_from "$DATE_TO")
+        else
+            DATE_FROM=$(default_date_from)
+        fi
+    fi
+}
+
 # --------------- Common param parsing ---------------
 
 # parse_host_params "$@"

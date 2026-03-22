@@ -18,6 +18,8 @@ bash scripts/summary.sh --host example.com
 
 ## История SQI
 
+> По умолчанию все history-скрипты запрашивают последние 90 дней. Для полной истории укажите `--date-from` явно.
+
 ```bash
 bash scripts/sqi_history.sh --host example.com --date-from 2025-01-01
 ```
