@@ -30,6 +30,20 @@ TMPFILE="${WM_TMPDIR}/wm_popular_q_$$.json"
 trap 'rm -f "$TMPFILE"' EXIT
 
 _curl_args="--data-urlencode order_by=$ORDER_BY"
+# Compute cache path BEFORE API call
+_host_dir=$(cache_host_dir)
+mkdir -p "$_host_dir/queries"
+_hash=$(cache_key "popular_${ORDER_BY}_${DEVICE}_${DATE_FROM}_${DATE_TO}")
+_out_file="$_host_dir/queries/popular_${_hash}.tsv"
+
+# TTL cache check (24h)
+if [ -z "$NO_CACHE" ] && cache_get_ttl "$_out_file" 1440; then
+    print_tsv_head "$_out_file" 30
+    echo ""
+    echo "(cached: $_out_file)"
+    exit 0
+fi
+
 _curl_args="$_curl_args --data-urlencode device_type_indicator=$DEVICE"
 _curl_args="$_curl_args --data-urlencode query_indicator=TOTAL_SHOWS"
 _curl_args="$_curl_args --data-urlencode query_indicator=TOTAL_CLICKS"
@@ -48,12 +62,6 @@ fi
 
 # shellcheck disable=SC2086
 webmaster_get "/search-queries/popular" $_curl_args > "$TMPFILE"
-
-# Parse and output TSV
-_host_dir=$(cache_host_dir)
-mkdir -p "$_host_dir/queries"
-_hash=$(cache_key "popular_${ORDER_BY}_${DEVICE}_${DATE_FROM}_${DATE_TO}")
-_out_file="$_host_dir/queries/popular_${_hash}.tsv"
 
 {
     echo "query_id	query_text	shows	clicks	avg_show_pos	avg_click_pos"

@@ -57,21 +57,34 @@ mkdir -p "$_host_dir/queries"
 _hash=$(cache_key "history_${QUERY_ID}_${DEVICE}_${DATE_FROM}_${DATE_TO}")
 _out_file="$_host_dir/queries/history_${_hash}.tsv"
 
-_body=$(cat "$TMPFILE")
+# TTL cache check (24h)
+if [ -z "$NO_CACHE" ] && cache_get_ttl "$_out_file" 1440; then
+    print_tsv_head "$_out_file" 30
+    echo ""
+    echo "(cached: $_out_file)"
+    exit 0
+fi
+
+# Flatten for reliable grep
+tr -d '\n\r' < "$TMPFILE" > "${TMPFILE}.flat"
+
+# Extract each indicator into temp file
+_ts="${WM_TMPDIR}/wm_qh_shows_$$.txt"
+_tc="${WM_TMPDIR}/wm_qh_clicks_$$.txt"
+_tp="${WM_TMPDIR}/wm_qh_pos_$$.txt"
+trap 'rm -f "$TMPFILE" "${TMPFILE}.flat" "$_ts" "$_tc" "$_tp"' EXIT
+
+grep -o '"TOTAL_SHOWS"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_ts"
+grep -o '"TOTAL_CLICKS"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_tc"
+grep -o '"AVG_SHOW_POSITION"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_tp"
 
 {
     echo "date	shows	clicks	avg_position"
-    # Extract TOTAL_SHOWS points for dates, then match clicks/position
-    _shows_data=$(printf '%s' "$_body" | grep -o '"TOTAL_SHOWS"[[:space:]]*:\[[^]]*\]' | head -1)
-    _clicks_data=$(printf '%s' "$_body" | grep -o '"TOTAL_CLICKS"[[:space:]]*:\[[^]]*\]' | head -1)
-    _pos_data=$(printf '%s' "$_body" | grep -o '"AVG_SHOW_POSITION"[[:space:]]*:\[[^]]*\]' | head -1)
-
-    # Parse dates from shows
-    printf '%s' "$_shows_data" | grep -o '"date":"[^"]*","value":[0-9.e+-]*' | while IFS= read -r _match; do
+    grep -o '"date":"[^"]*","value":[0-9.e+-]*' "$_ts" | while IFS= read -r _match; do
         _date=$(printf '%s' "$_match" | sed 's/.*"date":"//;s/".*//' | cut -c1-10)
         _shows=$(printf '%s' "$_match" | sed 's/.*"value"://')
-        _clicks=$(printf '%s' "$_clicks_data" | grep -o "\"$_date[^\"]*\",\"value\":[0-9.e+-]*" | head -1 | sed 's/.*"value"://')
-        _pos=$(printf '%s' "$_pos_data" | grep -o "\"$_date[^\"]*\",\"value\":[0-9.e+-]*" | head -1 | sed 's/.*"value"://')
+        _clicks=$(grep -o "\"$_date[^\"]*\",\"value\":[0-9.e+-]*" "$_tc" | head -1 | sed 's/.*"value"://')
+        _pos=$(grep -o "\"$_date[^\"]*\",\"value\":[0-9.e+-]*" "$_tp" | head -1 | sed 's/.*"value"://')
         printf '%s\t%s\t%s\t%s\n' "$_date" "${_shows:-0}" "${_clicks:-0}" "${_pos:--}"
     done
 } > "$_out_file"

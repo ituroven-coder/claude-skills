@@ -47,6 +47,19 @@ case "$ACTION" in
         ;;
 
     history)
+        _host_dir=$(cache_host_dir)
+        mkdir -p "$_host_dir/links"
+        _hash=$(cache_key "ext_links_history_${DATE_FROM}_${DATE_TO}")
+        _out_file="$_host_dir/links/external_history_${_hash}.tsv"
+
+        # TTL cache check (24h)
+        if [ -z "$NO_CACHE" ] && cache_get_ttl "$_out_file" 1440; then
+            print_tsv_head "$_out_file" 30
+            echo ""
+            echo "(cached: $_out_file)"
+            exit 0
+        fi
+
         _curl_args="--data-urlencode indicator=LINKS_TOTAL_COUNT"
         if [ -n "$DATE_FROM" ]; then
             _curl_args="$_curl_args --data-urlencode date_from=${DATE_FROM}T00:00:00.000+0300"
@@ -57,11 +70,6 @@ case "$ACTION" in
 
         # shellcheck disable=SC2086
         webmaster_get "/links/external/history" $_curl_args > "$TMPFILE"
-
-        _host_dir=$(cache_host_dir)
-        mkdir -p "$_host_dir/links"
-        _hash=$(cache_key "ext_links_history_${DATE_FROM}_${DATE_TO}")
-        _out_file="$_host_dir/links/external_history_${_hash}.tsv"
 
         {
             echo "date	total_links"

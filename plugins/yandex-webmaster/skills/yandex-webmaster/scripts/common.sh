@@ -266,6 +266,24 @@ cache_put() {
     cat > "$1"
 }
 
+# cache_get_ttl <file_path> <max_age_minutes>
+# Returns 0 if file exists and is newer than max_age_minutes.
+# Returns 1 (miss) if file is missing, empty, or older than TTL.
+cache_get_ttl() {
+    _cgt_file="$1"
+    _cgt_ttl="${2:-1440}"
+    if [ -f "$_cgt_file" ] && [ -s "$_cgt_file" ]; then
+        # find returns the file if it's OLDER than ttl → stale
+        _cgt_stale=$(find "$_cgt_file" -mmin +"$_cgt_ttl" 2>/dev/null)
+        if [ -z "$_cgt_stale" ]; then
+            return 0
+        fi
+        # Stale — delete and miss
+        rm -f "$_cgt_file"
+    fi
+    return 1
+}
+
 cache_host_dir() {
     _chd_dir="$CACHE_DIR/host_$(printf '%s' "$HOST_ID" | sed 's/[^a-zA-Z0-9._-]/_/g')"
     mkdir -p "$_chd_dir"

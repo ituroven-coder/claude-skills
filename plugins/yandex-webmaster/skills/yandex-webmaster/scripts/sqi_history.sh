@@ -16,6 +16,18 @@ require_host
 TMPFILE="${WM_TMPDIR}/wm_sqi_$$.json"
 trap 'rm -f "$TMPFILE"' EXIT
 
+# Parse points array
+_host_dir=$(cache_host_dir)
+_out_file="$_host_dir/sqi_history.tsv"
+
+# TTL cache check (24h)
+if [ -z "$NO_CACHE" ] && cache_get_ttl "$_out_file" 1440; then
+    print_tsv_head "$_out_file" 30
+    echo ""
+    echo "(cached: $_out_file)"
+    exit 0
+fi
+
 # Build curl args for dates
 _curl_args=""
 if [ -n "$DATE_FROM" ]; then
@@ -27,10 +39,6 @@ fi
 
 # shellcheck disable=SC2086
 webmaster_get "/sqi-history" $_curl_args > "$TMPFILE"
-
-# Parse points array
-_host_dir=$(cache_host_dir)
-_out_file="$_host_dir/sqi_history.tsv"
 
 {
     echo "date	sqi"

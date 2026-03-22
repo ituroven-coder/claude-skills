@@ -61,6 +61,19 @@ case "$ACTION" in
         ;;
 
     history)
+        _host_dir=$(cache_host_dir)
+        mkdir -p "$_host_dir/links"
+        _hash=$(cache_key "int_links_history_${DATE_FROM}_${DATE_TO}")
+        _out_file="$_host_dir/links/internal_history_${_hash}.tsv"
+
+        # TTL cache check (24h)
+        if [ -z "$NO_CACHE" ] && cache_get_ttl "$_out_file" 1440; then
+            print_tsv_head "$_out_file" 30
+            echo ""
+            echo "(cached: $_out_file)"
+            exit 0
+        fi
+
         _curl_args=""
         if [ -n "$DATE_FROM" ]; then
             _curl_args="--data-urlencode date_from=${DATE_FROM}T00:00:00.000+0300"
@@ -72,23 +85,24 @@ case "$ACTION" in
         # shellcheck disable=SC2086
         webmaster_get "/links/internal/broken/history" $_curl_args > "$TMPFILE"
 
-        _host_dir=$(cache_host_dir)
-        mkdir -p "$_host_dir/links"
-        _hash=$(cache_key "int_links_history_${DATE_FROM}_${DATE_TO}")
-        _out_file="$_host_dir/links/internal_history_${_hash}.tsv"
+        # Grep from file, not variable
+        tr -d '\n\r' < "$TMPFILE" > "${TMPFILE}.flat"
+        _tdbu="${WM_TMPDIR}/wm_il_dbu_$$.txt"
+        _tse="${WM_TMPDIR}/wm_il_se_$$.txt"
+        _tubr="${WM_TMPDIR}/wm_il_ubr_$$.txt"
+        trap 'rm -f "$TMPFILE" "${TMPFILE}.flat" "$_tdbu" "$_tse" "$_tubr"' EXIT
 
-        _body=$(cat "$TMPFILE")
-        _dbu=$(printf '%s' "$_body" | grep -o '"DISALLOWED_BY_USER"[[:space:]]*:\[[^]]*\]' | head -1)
-        _se=$(printf '%s' "$_body" | grep -o '"SITE_ERROR"[[:space:]]*:\[[^]]*\]' | head -1)
-        _ubr=$(printf '%s' "$_body" | grep -o '"UNSUPPORTED_BY_ROBOT"[[:space:]]*:\[[^]]*\]' | head -1)
+        grep -o '"DISALLOWED_BY_USER"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_tdbu"
+        grep -o '"SITE_ERROR"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_tse"
+        grep -o '"UNSUPPORTED_BY_ROBOT"[[:space:]]*:\[[^]]*\]' "${TMPFILE}.flat" | head -1 > "$_tubr"
 
         {
             echo "date	site_error	disallowed_by_user	unsupported_by_robot"
-            printf '%s' "$_se" | grep -o '"date":"[^"]*","value":[0-9]*' | while IFS= read -r _match; do
+            grep -o '"date":"[^"]*","value":[0-9]*' "$_tse" | while IFS= read -r _match; do
                 _date=$(printf '%s' "$_match" | sed 's/.*"date":"//;s/".*//' | cut -c1-10)
                 _vse=$(printf '%s' "$_match" | sed 's/.*"value"://')
-                _vdbu=$(printf '%s' "$_dbu" | grep -o "\"$_date[^\"]*\",\"value\":[0-9]*" | head -1 | sed 's/.*"value"://')
-                _vubr=$(printf '%s' "$_ubr" | grep -o "\"$_date[^\"]*\",\"value\":[0-9]*" | head -1 | sed 's/.*"value"://')
+                _vdbu=$(grep -o "\"$_date[^\"]*\",\"value\":[0-9]*" "$_tdbu" | head -1 | sed 's/.*"value"://')
+                _vubr=$(grep -o "\"$_date[^\"]*\",\"value\":[0-9]*" "$_tubr" | head -1 | sed 's/.*"value"://')
                 printf '%s\t%s\t%s\t%s\n' "$_date" "${_vse:-0}" "${_vdbu:-0}" "${_vubr:-0}"
             done
         } > "$_out_file"

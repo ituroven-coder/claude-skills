@@ -120,13 +120,21 @@ fi
 
 _json="$_json}"
 
-webmaster_post "/query-analytics/list" "$_json" > "$TMPFILE"
-
-# Parse response — avoid subshell variable loss by writing to temp file
+# Compute cache path BEFORE API call
 _host_dir=$(cache_host_dir)
 mkdir -p "$_host_dir/queries"
 _hash=$(cache_key "analytics_${TEXT_INDICATOR}_${FILTER_TEXT}_${DEVICE_QA}")
 _out_file="$_host_dir/queries/analytics_${_hash}.tsv"
+
+# TTL cache check (24h)
+if [ -z "$NO_CACHE" ] && cache_get_ttl "$_out_file" 1440; then
+    print_tsv_head "$_out_file" 30
+    echo ""
+    echo "(cached: $_out_file)"
+    exit 0
+fi
+
+webmaster_post "/query-analytics/list" "$_json" > "$TMPFILE"
 
 _count=$(json_extract_number "$(cat "$TMPFILE")" "count")
 
