@@ -19,7 +19,8 @@
   - [fal-ai-image](#fal-ai-image) — генерация изображений
   - [yandex-search-api](#yandex-search-api) — парсинг выдачи Яндекса
   - [yandex-metrika](#yandex-metrika) — аналитика Yandex Metrika
-- [telegraph-publisher](#telegraph-publisher) — публикация в Telegraph
+  - [yandex-webmaster](#yandex-webmaster) — управление сайтами в Яндекс.Вебмастере
+  - [telegraph-publisher](#telegraph-publisher) — публикация в Telegraph
 - [Структура репозитория](#структура-репозитория)
 - [Лицензия](#лицензия)
 
@@ -42,6 +43,7 @@
 /plugin install yandex-metrika
 /plugin install codex-review
 /plugin install fal-ai-image
+/plugin install yandex-webmaster
 /plugin install telegraph-publisher
 ```
 
@@ -261,6 +263,30 @@ SSH подключение к удалённым серверам с agent forwa
 
 ---
 
+### [yandex-webmaster](plugins/yandex-webmaster/skills/yandex-webmaster)
+
+Управление сайтами через Yandex Webmaster API v4.
+
+- Индексация: история, сэмплы, важные URL, экспорт архива
+- Поисковые запросы: топ запросов, история, расширенная аналитика с фильтрами
+- Переобход страниц: отправка URL, статус, квоты
+- Ссылки: битые внутренние, внешние (сэмплы + история)
+- Сайтмапы: список, добавление, приоритетный переобход
+- Диагностика, SQI, фиды, PRO SERP экспорт
+- 24-часовой TTL кеш для session-данных
+
+**Триггеры (RU):**
+- "проверь индексацию сайта"
+- "покажи поисковые запросы"
+- "отправь на переобход"
+
+**Триггеры (EN):**
+- "yandex webmaster"
+- "check site indexing"
+- "recrawl url"
+
+---
+
 ### [telegraph-publisher](plugins/telegraph-publisher/skills/telegraph-publisher)
 
 Публикация страниц в Telegraph с поддержкой медиа.
@@ -302,6 +328,7 @@ polyakov-claude-skills/
 │   ├── fal-ai-image/         # Плагин для генерации изображений
 │   ├── yandex-search-api/    # Плагин для Yandex Search API
 │   ├── yandex-metrika/       # Плагин для аналитики Yandex Metrika
+│   ├── yandex-webmaster/     # Плагин для Yandex Webmaster API
 │   └── telegraph-publisher/  # Плагин для публикации в Telegraph
 └── README.md
 ```
