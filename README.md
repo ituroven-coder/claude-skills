@@ -21,6 +21,7 @@
   - [yandex-metrika](#yandex-metrika) — аналитика Yandex Metrika
   - [yandex-webmaster](#yandex-webmaster) — управление сайтами в Яндекс.Вебмастере
   - [telegraph-publisher](#telegraph-publisher) — публикация в Telegraph
+  - [crawl4ai-seo](#crawl4ai-seo) — SEO-краулер сайтов
 - [Структура репозитория](#структура-репозитория)
 - [Лицензия](#лицензия)
 
@@ -45,6 +46,7 @@
 /plugin install fal-ai-image
 /plugin install yandex-webmaster
 /plugin install telegraph-publisher
+/plugin install crawl4ai-seo
 ```
 
 ### Ручная установка (без маркетплейса)
@@ -311,6 +313,29 @@ SSH подключение к удалённым серверам с agent forwa
 
 ---
 
+### [crawl4ai-seo](plugins/crawl4ai-seo/skills/crawl4ai-seo)
+
+SEO-краулер сайтов на базе Crawl4AI.
+
+- Инвентаризация сайта: URL, status, title, H1, meta, canonical, word count
+- On-page аудит: дубли заголовков, пустые meta, битые canonical, thin content
+- Анализ перелинковки: orphan pages, слабо связанные страницы, граф ссылок
+- Навигационный аудит: breadcrumbs, menu consistency, weak hubs
+- Сравнение лендингов и анализ конкурентов
+- Связка с yandex-search-api, yandex-metrika, yandex-webmaster
+
+**Триггеры (RU):**
+- "аудит сайта"
+- "проверь перелинковку"
+- "навигационный аудит"
+
+**Триггеры (EN):**
+- "site audit"
+- "internal linking audit"
+- "seo crawl"
+
+---
+
 ## Структура репозитория
 
 ```
@@ -329,7 +354,8 @@ polyakov-claude-skills/
 │   ├── yandex-search-api/    # Плагин для Yandex Search API
 │   ├── yandex-metrika/       # Плагин для аналитики Yandex Metrika
 │   ├── yandex-webmaster/     # Плагин для Yandex Webmaster API
-│   └── telegraph-publisher/  # Плагин для публикации в Telegraph
+│   ├── telegraph-publisher/  # Плагин для публикации в Telegraph
+│   └── crawl4ai-seo/         # Плагин для SEO-краулинга
 └── README.md
 ```
 

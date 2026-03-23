@@ -78,6 +78,12 @@
       "description": "Yandex Webmaster API: управление сайтами, индексация, поисковые запросы, переобход",
       "source": "./plugins/yandex-webmaster",
       "category": "productivity"
+    },
+    {
+      "name": "crawl4ai-seo",
+      "description": "SEO-краулер сайтов: инвентаризация, on-page аудит, перелинковка, навигационный аудит, анализ конкурентов",
+      "source": "./plugins/crawl4ai-seo",
+      "category": "productivity"
     }
   ]
 }
