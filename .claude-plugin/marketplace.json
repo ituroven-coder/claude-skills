@@ -84,6 +84,12 @@
       "description": "SEO-краулер сайтов: инвентаризация, on-page аудит, перелинковка, навигационный аудит, анализ конкурентов",
       "source": "./plugins/crawl4ai-seo",
       "category": "productivity"
+    },
+    {
+      "name": "telegram-channel-parser",
+      "description": "Парсинг публичных Telegram-каналов: посты, метрики, дайджесты, конкурентный анализ через t.me/s/",
+      "source": "./plugins/telegram-channel-parser",
+      "category": "productivity"
     }
   ]
 }
