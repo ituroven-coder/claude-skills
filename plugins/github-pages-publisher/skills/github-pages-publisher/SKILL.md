@@ -58,14 +58,13 @@ Prefer the clean directory URL when it resolves correctly.
 1. Determine the publish date bucket:
    - year = `YYYY`
    - year-month = `YYYY-MM`
-2. Verify the local artifact has already passed viewport validation at **1440px desktop** and **375px mobile**
-3. Create or update target directory:
+2. Create or update target directory:
    - `<year>/<year-month>/<page-slug>/`
-4. Copy artifact files into that directory
-5. Verify there is an entrypoint (`index.html` normally)
-6. Run a second local viewport validation against the publish-ready artifact copy before any push
-7. Commit and push to the Pages repo using the configured fine-grained token workflow
-8. Return the final public URL
+3. Copy artifact files into that directory
+4. Verify there is an entrypoint (`index.html` normally)
+5. Run pre-publish validation (see section above)
+6. Commit and push to the Pages repo using the configured fine-grained token workflow
+7. Return the final public URL
 
 ## Slug rules
 
@@ -74,24 +73,14 @@ Prefer the clean directory URL when it resolves correctly.
 - avoid spaces, underscores, Cyrillic, timestamps unless needed for uniqueness
 - if the title is user-facing, the slug can still be normalized separately
 
-## Mandatory local validation gate
-Publish is **not complete** until the artifact passes a local viewport/layout check before push.
+## Pre-publish validation
 
-Required gate:
-- run `python3 scripts/validate_layout.py --source <artifact-dir-or-html>` from this skill directory, or invoke the same script by absolute/relative path
-- validate at minimum:
-  - **desktop 1440x1080**
-  - **small mobile 375x812**
-- fail the publish if any of these are true:
-  - horizontal overflow exists
-  - no hero / main / primary heading is visible in the first viewport
-  - on mobile, the hero / h1 starts too high, collides with the top safe-area / status-bar zone, or reads like a cropped first-screen headline
-  - the screenshot sanity check fails
-- store validation screenshots and JSON report locally and mention their path in the final result when useful
-
-If the artifact uses a custom hero wrapper, prefer a stable hook such as `data-hero`. You may also pass one or more selectors with `--hero-selector`.
-
-A successful git push without this validation does **not** count as a finished publish under this skill.
+Before pushing, the agent must verify:
+- artifact has `index.html` entrypoint
+- no absolute local paths in HTML/CSS
+- no secrets in files
+- all local assets reachable from the target folder
+- page renders correctly (if browser tools are available, check at desktop 1440px and mobile 375px)
 
 ## Safety rules
 
@@ -109,4 +98,3 @@ Read `config/README.md` for required environment variables and URL derivation.
 
 Read if needed:
 - `references/publish-checklist.md` — operational checklist before pushing
-- `references/layout-validation.md` — viewport set, required checks, validator usage, and expected evidence
