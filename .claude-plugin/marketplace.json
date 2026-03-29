@@ -90,6 +90,12 @@
       "description": "Парсинг публичных Telegram-каналов: посты, метрики, дайджесты, конкурентный анализ через t.me/s/",
       "source": "./plugins/telegram-channel-parser",
       "category": "productivity"
+    },
+    {
+      "name": "github-pages-publisher",
+      "description": "Публикация статических артифактов на GitHub Pages с YYYY/YYYY-MM структурой и viewport-валидацией",
+      "source": "./plugins/github-pages-publisher",
+      "category": "development"
     }
   ]
 }
