@@ -1,23 +1,21 @@
 /**
- * Telegram Digest Feed — React artifact template
+ * Telegram Digest Feed — React artifact template (ultra-compact reader)
  *
  * Agent: after running digest.sh, parse TSV output and substitute into POSTS_DATA below.
  * Then render this as a React artifact.
  *
- * TSV columns from digest: id \t date \t views \t reactions \t fwd_from \t fwd_link \t text \t media_url
- * Each post also needs a "channel" field (the channel username it came from).
+ * TSV columns: id \t date \t views \t reactions \t fwd_from \t fwd_link \t text \t media_url
+ * Each post needs a "channel" field (the channel username it came from).
  */
 
 import { useState, useMemo } from "react";
 
 // ---- Agent substitutes this data ----
 const POSTS_DATA: Post[] = [
-  // Example:
-  // { id: "123", channel: "countwithsasha", date: "2026-03-29T14:30:00+00:00", views: "1.2K", reactions: "45", text: "Post text here...", mediaUrl: "https://cdn..." },
+  // { id: "123", channel: "countwithsasha", date: "2026-03-29T14:30:00+00:00", views: "1.2K", reactions: "45", text: "Post text...", mediaUrl: "https://cdn..." },
 ];
 
 const CHANNELS: Record<string, { title: string; subscribers: string }> = {
-  // Example:
   // countwithsasha: { title: "Count With Sasha", subscribers: "12K" },
 };
 // ---- End of data section ----
@@ -37,7 +35,7 @@ interface Post {
 type Period = "24h" | "today" | "week" | "month" | "all";
 
 const PERIOD_LABELS: Record<Period, string> = {
-  "24h": "24 часа",
+  "24h": "24ч",
   today: "Сегодня",
   week: "Неделя",
   month: "Месяц",
@@ -61,10 +59,10 @@ function timeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (diff < 60) return "только что";
-  if (diff < 3600) return `${Math.floor(diff / 60)} мин`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} ч`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)} д`;
+  if (diff < 60) return "сейчас";
+  if (diff < 3600) return `${Math.floor(diff / 60)}м`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}ч`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}д`;
   return date.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }
 
@@ -81,57 +79,60 @@ function filterByPeriod(posts: Post[], period: Period): Post[] {
   return posts.filter((p) => new Date(p.date) >= cutoff);
 }
 
-function PostCard({ post }: { post: Post }) {
+function PostRow({ post }: { post: Post }) {
+  const [expanded, setExpanded] = useState(false);
   const color = getChannelColor(post.channel);
-  const channelInfo = CHANNELS[post.channel];
-  const displayName = channelInfo?.title || `@${post.channel}`;
   const postUrl = `https://t.me/${post.channel}/${post.id}`;
+  const needsTruncate = post.text.length > 140;
+  const displayText = !expanded && needsTruncate ? post.text.slice(0, 140) + "..." : post.text;
 
   return (
-    <div style={{
-      background: "#fff",
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 12,
-      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-      borderLeft: `4px solid ${color}`,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 10, gap: 10 }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: "50%",
-          background: color, display: "flex", alignItems: "center",
-          justifyContent: "center", color: "#fff", fontWeight: 700,
-          fontSize: 16, flexShrink: 0,
+    <div style={{ padding: "10px 0", borderBottom: "1px solid #f0f0f0" }}>
+      {/* Header: initial + channel + time */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <span style={{
+          width: 22, height: 22, borderRadius: "50%", background: color,
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          color: "#fff", fontSize: 11, fontWeight: 700, flexShrink: 0,
         }}>
           {post.channel[0].toUpperCase()}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14, color: "#1a1a1a" }}>{displayName}</div>
-          <div style={{ fontSize: 12, color: "#8e8e93" }}>{timeAgo(post.date)}</div>
-        </div>
+        </span>
         <a href={postUrl} target="_blank" rel="noopener noreferrer"
-          style={{ fontSize: 12, color: "#2AABEE", textDecoration: "none", flexShrink: 0 }}>
-          Открыть
+          style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          @{post.channel}
         </a>
+        <span style={{ fontSize: 11, color: "#aaa", flexShrink: 0 }}>{timeAgo(post.date)}</span>
       </div>
 
-      {post.mediaUrl && (
-        <div style={{ marginBottom: 10, borderRadius: 8, overflow: "hidden" }}>
-          <img src={post.mediaUrl} alt="" style={{ width: "100%", display: "block", maxHeight: 300, objectFit: "cover" }} />
-        </div>
-      )}
-
-      <div style={{ fontSize: 14, lineHeight: 1.5, color: "#333", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-        {post.text}
-      </div>
-
+      {/* Forwarded from */}
       {post.fwd_from && (
-        <div style={{ fontSize: 12, color: "#8e8e93", marginTop: 8, fontStyle: "italic" }}>
-          Переслано из {post.fwd_from}
+        <div style={{ fontSize: 11, color: "#8e8e93", marginBottom: 4, paddingLeft: 30 }}>
+          ↩ {post.fwd_from}
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 13, color: "#8e8e93" }}>
+      {/* Content: optional thumbnail + text */}
+      <div style={{ display: "flex", gap: 10, paddingLeft: 30 }}>
+        {post.mediaUrl && (
+          <img src={post.mediaUrl} alt=""
+            style={{ width: 56, height: 56, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            onClick={() => needsTruncate && setExpanded(!expanded)}
+            style={{
+              fontSize: 13, lineHeight: 1.4, color: "#333",
+              cursor: needsTruncate ? "pointer" : "default",
+              wordBreak: "break-word",
+            }}
+          >
+            {displayText}
+          </div>
+        </div>
+      </div>
+
+      {/* Metrics */}
+      <div style={{ display: "flex", gap: 12, marginTop: 4, paddingLeft: 30, fontSize: 11, color: "#aaa" }}>
         {post.views && <span>👁 {post.views}</span>}
         {post.reactions && <span>❤️ {post.reactions}</span>}
       </div>
@@ -154,53 +155,59 @@ export default function TelegramDigest() {
   }, [period, channelFilter]);
 
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto", padding: "16px 12px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-      <h2 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 700 }}>Telegram Digest</h2>
-      <p style={{ margin: "0 0 16px", fontSize: 13, color: "#8e8e93" }}>
-        {filtered.length} постов из {channelFilter === "all" ? allChannels.length : 1} каналов
-      </p>
+    <div style={{ maxWidth: 400, margin: "0 auto", padding: "12px 8px", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Telegram Digest</h2>
+        <span style={{ fontSize: 11, color: "#aaa" }}>
+          {filtered.length} постов
+        </span>
+      </div>
 
-      {/* Period filter */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+      {/* Period tabs */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
         {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
           <button key={p} onClick={() => setPeriod(p)} style={{
-            padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
-            fontSize: 13, fontWeight: period === p ? 600 : 400,
-            background: period === p ? "#2AABEE" : "#f0f0f0",
-            color: period === p ? "#fff" : "#555",
+            padding: "4px 10px", borderRadius: 14, border: "none", cursor: "pointer",
+            fontSize: 12, fontWeight: period === p ? 600 : 400,
+            background: period === p ? "#2AABEE" : "#f5f5f5",
+            color: period === p ? "#fff" : "#666",
           }}>
             {PERIOD_LABELS[p]}
           </button>
         ))}
       </div>
 
-      {/* Channel filter */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+      {/* Channel chips */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
         <button onClick={() => setChannelFilter("all")} style={{
-          padding: "4px 12px", borderRadius: 16, border: "none", cursor: "pointer",
-          fontSize: 12, background: channelFilter === "all" ? "#333" : "#f0f0f0",
-          color: channelFilter === "all" ? "#fff" : "#555",
+          padding: "3px 8px", borderRadius: 10, border: "none", cursor: "pointer",
+          fontSize: 11, background: channelFilter === "all" ? "#333" : "#f5f5f5",
+          color: channelFilter === "all" ? "#fff" : "#666",
         }}>
           Все
         </button>
         {allChannels.map((ch) => (
           <button key={ch} onClick={() => setChannelFilter(ch)} style={{
-            padding: "4px 12px", borderRadius: 16, border: "none", cursor: "pointer",
-            fontSize: 12, background: channelFilter === ch ? getChannelColor(ch) : "#f0f0f0",
-            color: channelFilter === ch ? "#fff" : "#555",
+            padding: "3px 8px", borderRadius: 10, border: "none", cursor: "pointer",
+            fontSize: 11, background: channelFilter === ch ? getChannelColor(ch) : "#f5f5f5",
+            color: channelFilter === ch ? "#fff" : "#666",
           }}>
             @{ch}
           </button>
         ))}
       </div>
 
-      {/* Posts feed */}
+      {/* Divider */}
+      <div style={{ height: 1, background: "#e8e8e8", marginBottom: 4 }} />
+
+      {/* Posts */}
       {filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: "#8e8e93" }}>
+        <div style={{ textAlign: "center", padding: 32, color: "#aaa", fontSize: 13 }}>
           Нет постов за выбранный период
         </div>
       ) : (
-        filtered.map((post) => <PostCard key={`${post.channel}-${post.id}`} post={post} />)
+        filtered.map((post) => <PostRow key={`${post.channel}-${post.id}`} post={post} />)
       )}
     </div>
   );
