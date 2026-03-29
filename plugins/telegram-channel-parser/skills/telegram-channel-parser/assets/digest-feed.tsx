@@ -76,10 +76,16 @@ function filterByPeriod(posts: Post[], period: Period): Post[] {
 
 function PostRow({ post }: { post: Post }) {
   const [expanded, setExpanded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const color = getChannelColor(post.channel);
   const postUrl = `https://t.me/${post.channel}/${post.id}`;
   const needsTruncate = post.text.length > 140;
   const displayText = !expanded && needsTruncate ? post.text.slice(0, 140) + "..." : post.text;
+  const showMedia = post.mediaUrl && !imgError;
+
+  const openPost = () => {
+    try { window.open(postUrl, "_blank"); } catch { /* sandbox restriction */ }
+  };
 
   return (
     <div style={{ padding: "10px 0", borderBottom: "1px solid #f0f0f0" }}>
@@ -92,10 +98,9 @@ function PostRow({ post }: { post: Post }) {
         }}>
           {post.channel[0].toUpperCase()}
         </span>
-        <a href={postUrl} target="_blank" rel="noopener noreferrer"
-          style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           @{post.channel}
-        </a>
+        </span>
         <span style={{ fontSize: 11, color: "#aaa", flexShrink: 0 }}>{timeAgo(post.date)}</span>
       </div>
 
@@ -109,8 +114,17 @@ function PostRow({ post }: { post: Post }) {
       {/* Content: optional thumbnail + text */}
       <div style={{ display: "flex", gap: 10, paddingLeft: 30 }}>
         {post.mediaUrl && (
-          <img src={post.mediaUrl} alt=""
-            style={{ width: 56, height: 56, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
+          imgError ? (
+            <div style={{
+              width: 56, height: 56, borderRadius: 6, flexShrink: 0,
+              background: "#f0f0f0", display: "flex", alignItems: "center",
+              justifyContent: "center", fontSize: 20, color: "#ccc",
+            }}>🖼</div>
+          ) : (
+            <img src={post.mediaUrl} alt=""
+              onError={() => setImgError(true)}
+              style={{ width: 56, height: 56, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
+          )
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
@@ -126,10 +140,17 @@ function PostRow({ post }: { post: Post }) {
         </div>
       </div>
 
-      {/* Metrics */}
-      <div style={{ display: "flex", gap: 12, marginTop: 4, paddingLeft: 30, fontSize: 11, color: "#aaa" }}>
+      {/* Metrics + open link */}
+      <div style={{ display: "flex", gap: 12, marginTop: 4, paddingLeft: 30, fontSize: 11, color: "#aaa", alignItems: "center" }}>
         {post.views && <span>👁 {post.views}</span>}
         {post.reactions && <span>❤️ {post.reactions}</span>}
+        <span style={{ flex: 1 }} />
+        <span
+          onClick={openPost}
+          style={{ color: "#2AABEE", cursor: "pointer", userSelect: "none" }}
+        >
+          Открыть →
+        </span>
       </div>
     </div>
   );
