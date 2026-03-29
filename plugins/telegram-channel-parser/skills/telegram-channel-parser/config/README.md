@@ -9,27 +9,38 @@
 cp config/.env.example config/.env
 ```
 
-Готово — дайджест AI-каналов работает из коробки. Отредактируйте `.env` чтобы добавить свои каналы.
+Готово — дайджест AI-каналов работает из коробки.
 
 ## Категории дайджестов
 
-В `.env` можно определить несколько списков каналов по категориям:
+`.env` содержит **реестр категорий** — агент читает его и знает какие дайджесты доступны.
+
+### Структура
 
 ```bash
-# Дефолтный список (используется digest.sh без --channels)
-TG_CHANNELS=countwithsasha,evilfreelancer,aostrikov_ai_agents
+# Реестр (агент читает этот список)
+TG_CATEGORIES=ai,crypto,news
+TG_DEFAULT_CATEGORY=ai
 
-# Дополнительные категории (агент читает .env и выбирает нужный)
+# Категория: AI
+TG_CHANNELS_AI_LABEL=AI и технологии
+TG_CHANNELS_AI=countwithsasha,evilfreelancer,...
+
+# Категория: Crypto
+TG_CHANNELS_CRYPTO_LABEL=Криптовалюты
 TG_CHANNELS_CRYPTO=channel1,channel2
-TG_CHANNELS_NEWS=channel1,channel2
 ```
 
-Агент сам подберёт нужную категорию по контексту запроса.
+### Конвенция именования
+
+Для каждой категории `<ID>`:
+- `TG_CHANNELS_<ID>` — список каналов (через запятую, без @)
+- `TG_CHANNELS_<ID>_LABEL` — человекочитаемое название категории
 
 ### Приоритет каналов
 
 1. `--channels "a,b,c"` — явный параметр (высший приоритет)
-2. `TG_CHANNELS` / `TG_CHANNELS_*` из `config/.env`
+2. Категория из `.env` — агент подбирает по контексту
 3. Без `.env` — агент спросит какие каналы парсить
 
 ## Ограничения

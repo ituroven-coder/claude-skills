@@ -22,19 +22,33 @@ cp config/.env.example config/.env
 
 **Без `.env`:** скилл работает, но каналы нужно передавать явно через `--channel` / `--channels`.
 
-**С `.env`:** дайджест AI-каналов готов из коробки. Можно добавить свои категории:
+**С `.env`:** дайджест AI-каналов готов из коробки. Пользователь может добавить свои категории.
+
+**Структура `.env` (категории дайджестов):**
 ```bash
-TG_CHANNELS=countwithsasha,evilfreelancer,...          # дефолт
-TG_CHANNELS_CRYPTO=channel1,channel2                    # крипто
-TG_CHANNELS_NEWS=channel1,channel2                      # новости
+TG_CATEGORIES=ai,crypto         # реестр доступных категорий
+TG_DEFAULT_CATEGORY=ai           # дефолтная при запросе "дайджест"
+
+TG_CHANNELS_AI_LABEL=AI и технологии
+TG_CHANNELS_AI=countwithsasha,evilfreelancer,...
+
+TG_CHANNELS_CRYPTO_LABEL=Криптовалюты
+TG_CHANNELS_CRYPTO=channel1,channel2
 ```
 
-**Приоритет:** `--channels` > `.env TG_CHANNELS` > агент спрашивает пользователя.
+**Алгоритм агента при запросе дайджеста:**
+1. Прочитать `config/.env` (если есть)
+2. Распарсить `TG_CATEGORIES` — получить список доступных категорий
+3. Для каждой категории: `TG_CHANNELS_<ID>` = каналы, `TG_CHANNELS_<ID>_LABEL` = название
+4. Определить нужную категорию:
+   - Пользователь назвал тему → сопоставить с `_LABEL`
+   - Не уточнил → использовать `TG_DEFAULT_CATEGORY`
+   - Несколько категорий подходят → предложить выбор
+5. Передать каналы нужной категории через `--channels`
 
-**Определение каналов агентом:**
-- Пользователь назвал канал(ы) явно → `--channel` / `--channels`
-- Пользователь попросил дайджест → прочитать `config/.env`, выбрать нужную категорию (`TG_CHANNELS`, `TG_CHANNELS_CRYPTO`, ...) и передать через `--channels`
-- Нет `.env` и не указаны каналы → спросить какие каналы парсить, предложить скопировать `.env.example`
+**Если `.env` нет** → спросить какие каналы парсить, предложить `cp config/.env.example config/.env`.
+
+**Приоритет:** `--channels` явно > категория из `.env` > агент спрашивает.
 
 Подробности: [config/README.md](config/README.md).
 

@@ -198,7 +198,13 @@ require_channel() {
 
 require_channels() {
     if [ -z "$CHANNELS" ]; then
-        if [ -n "$TG_CHANNELS" ]; then
+        # Try default category from .env
+        local _cat="${TG_DEFAULT_CATEGORY:-ai}"
+        _cat=$(echo "$_cat" | tr '[:lower:]' '[:upper:]')
+        eval "_cat_channels=\${TG_CHANNELS_${_cat}:-}"
+        if [ -n "$_cat_channels" ]; then
+            CHANNELS="$_cat_channels"
+        elif [ -n "$TG_CHANNELS" ]; then
             CHANNELS="$TG_CHANNELS"
         else
             echo "Error: --channels required. Copy config/.env.example to config/.env or pass --channels \"ch1,ch2\"." >&2
