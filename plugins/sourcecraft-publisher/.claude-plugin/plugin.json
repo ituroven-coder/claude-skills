@@ -1,0 +1,8 @@
+{
+  "name": "sourcecraft-publisher",
+  "version": "1.0.0",
+  "description": "Publish static page artifacts to SourceCraft Sites (Yandex infrastructure) with year/month directory layout",
+  "author": {
+    "name": "Polyakov"
+  }
+}
