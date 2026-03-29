@@ -7,17 +7,68 @@
 # fwd_link = link to original post (empty if original)
 # media_url = first image/video thumbnail URL (empty if no media)
 
-BEGIN { OFS = "\t"; id = ""; date = ""; views = ""; text = ""; reactions = 0; fwd_from = ""; fwd_link = ""; media_url = "" }
+BEGIN { OFS = "\t"; id = ""; date = ""; views = ""; text = ""; reactions = 0; fwd_from = ""; fwd_link = ""; media_url = ""; in_text = 0 }
+
+function clean_text(t) {
+    gsub(/[\t\n\r]+/, " ", t)
+    # Convert tg_spoiler class
+    gsub(/class="tg_spoiler"/, "class=\"tg-spoiler\"", t)
+    # Convert Telegram blockquote: opening div → <blockquote>, its closing </div> → </blockquote>
+    # Mark quote-divs before stripping all divs
+    gsub(/<div[^>]*class="[^"]*quote[^"]*"[^>]*>/, "<!BQ>", t)
+    # Strip all div tags (open and close)
+    gsub(/<\/?div[^>]*>/, "", t)
+    # Now restore blockquotes — each <!BQ> needs a closing tag
+    # Simple approach: replace markers, then ensure balanced tags
+    gsub(/<!BQ>/, "<blockquote>", t)
+    # Ensure all blockquotes are closed — count and append missing closers
+    {
+        _open = 0; _close = 0
+        _tmp = t
+        while (match(_tmp, /<blockquote>/)) { _open++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        _tmp = t
+        while (match(_tmp, /<\/blockquote>/)) { _close++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        while (_close < _open) { t = t "</blockquote>"; _close++ }
+    }
+    # Preserve spoiler spans, remove all other spans
+    gsub(/<span[^>]*tg-spoiler[^>]*>/, "<!SPOILER>", t)
+    gsub(/<\/?span[^>]*>/, "", t)
+    gsub(/<!SPOILER>/, "<span class=\"tg-spoiler\">", t)
+    # Ensure spoiler spans are closed
+    {
+        _open = 0; _close = 0
+        _tmp = t
+        while (match(_tmp, /<span[^>]*>/)) { _open++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        _tmp = t
+        while (match(_tmp, /<\/span>/)) { _close++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        while (_close < _open) { t = t "</span>"; _close++ }
+    }
+    # Ensure pre tags are closed
+    {
+        _open = 0; _close = 0
+        _tmp = t
+        while (match(_tmp, /<pre[^>]*>/)) { _open++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        _tmp = t
+        while (match(_tmp, /<\/pre>/)) { _close++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        while (_close < _open) { t = t "</pre>"; _close++ }
+    }
+    # Clean leftover attrs except href and class
+    gsub(/ style="[^"]*"/, "", t)
+    gsub(/ dir="[^"]*"/, "", t)
+    # Normalize whitespace
+    gsub(/[[:space:]]+/, " ", t)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", t)
+    return t
+}
 
 /data-post=/ {
     if (id != "") {
-        gsub(/[\t\n\r]+/, " ", text)
-        gsub(/^[[:space:]]+|[[:space:]]+$/, "", text)
+        text = clean_text(text)
         gsub(/[[:space:]]/, "", views)
         if (reactions == 0) reactions = ""
         print id, date, views, reactions, fwd_from, fwd_link, text, media_url
     }
-    id = ""; date = ""; views = ""; text = ""; reactions = 0; fwd_from = ""; fwd_link = ""; media_url = ""
+    id = ""; date = ""; views = ""; text = ""; reactions = 0; fwd_from = ""; fwd_link = ""; media_url = ""; in_text = 0
     tmp = $0
     sub(/.*data-post="[^"]*\//, "", tmp)
     sub(/".*/, "", tmp)
@@ -72,29 +123,33 @@ id != "" && /tgme_widget_message_video_thumb/ && media_url == "" {
     }
 }
 
-id != "" && /tgme_widget_message_text/ && text == "" {
+# Multi-line text capture: start collecting when we see tgme_widget_message_text
+id != "" && /tgme_widget_message_text/ && text == "" && in_text == 0 {
+    in_text = 1
     tmp = $0
-    # Strip the outer wrapper div, keep inner HTML
     sub(/.*tgme_widget_message_text[^>]*>/, "", tmp)
-    sub(/<\/div>.*/, "", tmp)
-    # Normalize whitespace
-    gsub(/[[:space:]]+/, " ", tmp)
-    gsub(/^[[:space:]]+|[[:space:]]+$/, "", tmp)
-    # Convert tg_spoiler class to our tg-spoiler
-    gsub(/class="tg_spoiler"/, "class=\"tg-spoiler\"", tmp)
-    # Convert Telegram blockquote wrapper
-    gsub(/<div[^>]*class="[^"]*quote[^"]*"[^>]*>/, "<blockquote>", tmp)
-    gsub(/<\/div>/, "", tmp)
-    # Strip unsafe tags but keep: a, b, strong, i, em, s, del, code, pre, br, blockquote, span.tg-spoiler
-    gsub(/<\/?div[^>]*>/, "", tmp)
-    # Remove non-spoiler spans
-    gsub(/<span[^>]*tg-spoiler[^>]*>/, "<!SPOILER>", tmp)
-    gsub(/<\/?span[^>]*>/, "", tmp)
-    gsub(/<!SPOILER>/, "<span class=\"tg-spoiler\">", tmp)
-    # Clean leftover attrs except href and class
-    gsub(/ style="[^"]*"/, "", tmp)
-    gsub(/ dir="[^"]*"/, "", tmp)
-    if (tmp != "") text = tmp
+    # Check if closing </div> is on the same line
+    if (tmp ~ /<\/div>/) {
+        sub(/<\/div>.*/, "", tmp)
+        text = tmp
+        in_text = 0
+    } else {
+        text = tmp
+    }
+    next
+}
+
+# Continue collecting text lines until closing </div>
+in_text == 1 {
+    tmp = $0
+    if (tmp ~ /<\/div>/) {
+        sub(/<\/div>.*/, "", tmp)
+        text = text " " tmp
+        in_text = 0
+    } else {
+        text = text " " tmp
+    }
+    next
 }
 
 id != "" && /tgme_reaction/ {
@@ -109,8 +164,7 @@ id != "" && /tgme_reaction/ {
 
 END {
     if (id != "") {
-        gsub(/[\t\n\r]+/, " ", text)
-        gsub(/^[[:space:]]+|[[:space:]]+$/, "", text)
+        text = clean_text(text)
         gsub(/[[:space:]]/, "", views)
         if (reactions == 0) reactions = ""
         print id, date, views, reactions, fwd_from, fwd_link, text, media_url
