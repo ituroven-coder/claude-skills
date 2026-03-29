@@ -1,24 +1,19 @@
 /**
  * Telegram Digest Feed — React artifact template (ultra-compact reader)
  *
- * Agent: after running digest.sh, parse TSV output and substitute into POSTS_DATA below.
- * Then render this as a React artifact.
- *
- * TSV columns: id \t date \t views \t reactions \t fwd_from \t fwd_link \t text \t media_url
- * Each post needs a "channel" field (the channel username it came from).
+ * Usage:
+ * 1. Agent runs: bash scripts/digest_json.sh --period today
+ * 2. Script outputs JSON: { posts: [...], channels: {...} }
+ * 3. Agent reads this template, replaces __DIGEST_DATA__ with the JSON
+ * 4. Renders as React artifact
  */
 
 import { useState, useMemo } from "react";
 
-// ---- Agent substitutes this data ----
-const POSTS_DATA: Post[] = [
-  // { id: "123", channel: "countwithsasha", date: "2026-03-29T14:30:00+00:00", views: "1.2K", reactions: "45", text: "Post text...", mediaUrl: "https://cdn..." },
-];
-
-const CHANNELS: Record<string, { title: string; subscribers: string }> = {
-  // countwithsasha: { title: "Count With Sasha", subscribers: "12K" },
-};
-// ---- End of data section ----
+// __DIGEST_DATA__ — agent replaces this line with JSON from digest_json.sh
+const _data: { posts: Post[]; channels: Record<string, { title: string; subscribers: string }> } = __DIGEST_DATA__;
+const POSTS_DATA = _data.posts;
+const CHANNELS = _data.channels;
 
 interface Post {
   id: string;

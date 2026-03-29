@@ -118,21 +118,17 @@ bash scripts/compare_channels.sh --channels "channel1,channel2,channel3" --limit
 
 При запросе дайджеста — **отображай результаты как React-артифакт** (лента карточек).
 
-**Алгоритм:**
-1. Запусти `digest.sh` для нужных каналов и периода
-2. Запусти `channel_info.sh` для каждого канала (название, подписчики)
-3. Прочитай шаблон: `assets/digest-feed.tsx`
-4. Подставь данные в `POSTS_DATA` и `CHANNELS` в шаблоне
-5. Отрендери как React-артифакт
+**Алгоритм (3 шага):**
+1. Запусти `digest_json.sh` — он выдаст готовый JSON:
+   ```bash
+   bash scripts/digest_json.sh --period today
+   ```
+2. Прочитай шаблон `assets/digest-feed.tsx`
+3. Замени `__DIGEST_DATA__` в шаблоне на JSON из шага 1, отрендери как React-артифакт
 
-**Формат данных для подстановки:**
-```typescript
-// POSTS_DATA — массив постов из TSV вывода digest.sh
-// TSV колонки: id \t date \t views \t reactions \t fwd_from \t fwd_link \t text \t media_url
-{ id: "123", channel: "countwithsasha", date: "2026-03-29T14:30:00+00:00", views: "1.2K", reactions: "45", text: "...", mediaUrl: "https://cdn..." }
-
-// CHANNELS — инфо о каналах из channel_info.sh
-{ countwithsasha: { title: "Count With Sasha", subscribers: "12K" } }
+**Пример вывода `digest_json.sh`:**
+```json
+{"posts":[{"id":"123","channel":"countwithsasha","date":"2026-03-29T14:30:00+00:00","views":"1.2K","reactions":"45","text":"...","mediaUrl":"https://cdn..."}],"channels":{"countwithsasha":{"title":"Count With Sasha","subscribers":"12K"}}}
 ```
 
 Посты автоматически сортируются по дате (новые сверху), перемешаны между каналами. Пользователь фильтрует по периоду и каналу через UI.
@@ -153,6 +149,7 @@ bash scripts/<script>.sh --channel <username> [--limit N] [--before <post_id>] [
 | `posting_schedule.sh` | Анализ времени публикаций | `--limit` |
 | `export_csv.sh` | Экспорт в CSV | `--csv path` |
 | `digest.sh` | Дайджест нескольких каналов | `--channels "a,b,c"`, `--period today\|yesterday\|week\|N` |
+| `digest_json.sh` | Дайджест → JSON (для React-артифакта) | `--channels "a,b,c"`, `--period today\|yesterday\|week\|N` |
 | `compare_channels.sh` | Сравнительная таблица | `--channels "a,b,c"` |
 
 ## Общие параметры
