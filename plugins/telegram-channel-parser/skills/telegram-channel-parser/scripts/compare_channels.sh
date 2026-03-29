@@ -25,11 +25,7 @@ for _channel in $CHANNELS; do
 
     # Fetch info
     _html_file="$_cache_dir/raw/page_latest.html"
-    if [ -z "$NO_CACHE" ] && cache_is_fresh "$_html_file"; then
-        : # use cached
-    else
-        tg_fetch "${TG_BASE_URL}/${_channel}" > "$_html_file" 2>/dev/null || true
-    fi
+    tg_fetch "${TG_BASE_URL}/${_channel}" > "$_html_file" 2>/dev/null || true
 
     _subs=""
     if [ -s "$_html_file" ]; then

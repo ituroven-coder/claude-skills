@@ -15,23 +15,32 @@ description: |
 
 ## Config
 
-Никаких токенов не требуется. Скилл работает из коробки — дефолтный набор AI/tech каналов уже зашит.
+Никаких токенов не требуется. Для дайджестов — скопировать `.env.example`:
+```bash
+cp config/.env.example config/.env
+```
 
-**Приоритет каналов:**
-1. `--channels "a,b,c"` — явный параметр (высший приоритет)
-2. `TG_CHANNELS` из `config/.env` — пользовательский набор
-3. Встроенный community-список — дефолт (работает без конфига)
+**Без `.env`:** скилл работает, но каналы нужно передавать явно через `--channel` / `--channels`.
+
+**С `.env`:** дайджест AI-каналов готов из коробки. Можно добавить свои категории:
+```bash
+TG_CHANNELS=countwithsasha,evilfreelancer,...          # дефолт
+TG_CHANNELS_CRYPTO=channel1,channel2                    # крипто
+TG_CHANNELS_NEWS=channel1,channel2                      # новости
+```
+
+**Приоритет:** `--channels` > `.env TG_CHANNELS` > агент спрашивает пользователя.
 
 **Определение каналов агентом:**
-- Пользователь назвал канал(ы) явно → передать через `--channel` / `--channels`
-- Пользователь попросил дайджест без уточнения → запустить без `--channels` (используется дефолтный набор)
-- Пользователь хочет свои каналы навсегда → `cp config/.env.example config/.env` и отредактировать
+- Пользователь назвал канал(ы) явно → `--channel` / `--channels`
+- Пользователь попросил дайджест → прочитать `config/.env`, выбрать нужную категорию (`TG_CHANNELS`, `TG_CHANNELS_CRYPTO`, ...) и передать через `--channels`
+- Нет `.env` и не указаны каналы → спросить какие каналы парсить, предложить скопировать `.env.example`
 
-Подробности: `config/README.md`.
+Подробности: [config/README.md](config/README.md).
 
 ## Philosophy
 
-1. **Cache-first** — HTML-страницы кешируются по ключу `channel+before_id`. Повторный запрос не тратит ни токенов, ни времени. Кеш — TSV, grep-friendly.
+1. **Always fresh** — данные запрашиваются в реальном времени при каждом вызове. Никогда не пропустишь свежий пост.
 2. **Context window hygiene** — stdout ограничен 30 строками. Полные данные в TSV/CSV. LLM работает с компактным форматом, а не с сырым HTML.
 3. **Rate limit** — между запросами к t.me пауза 1.5с. Не жадничаем.
 4. **Чистый POSIX sh** — никаких зависимостей кроме curl, sed, awk, grep.
@@ -137,25 +146,13 @@ bash scripts/<script>.sh --channel <username> [--limit N] [--before <post_id>] [
 | Param | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `--channel` | да* | — | Username канала (без @) |
-| `--channels` | нет | community list | Несколько каналов через запятую |
+| `--channels` | нет | из .env | Несколько каналов через запятую |
 | `--limit` | нет | 20 | Сколько постов загрузить |
 | `--before` | нет | — | ID поста для пагинации |
 | `--after-date` | нет | — | Не загружать посты старше даты (YYYY-MM-DD) |
 | `--csv` | нет | — | Путь для экспорта |
-| `--no-cache` | нет | — | Пропустить кеш |
 
 *`--channel` для одного канала, `--channels` для мультиканальных команд.
-
-## Кеш-стратегия
-
-Кеш хранится в `cache/`:
-- `channels/<username>/posts.tsv` — посты (id, date, views, reactions, fwd_from, fwd_link, text, media_url)
-- `channels/<username>/info.json` — метаданные канала
-- `channels/<username>/raw/*.html` — сырой HTML страниц (для повторного парсинга)
-
-Для поиска по кешу: `grep "text" cache/channels/*/posts.tsv`.
-
-TTL кеша: 6 часов (настраивается через `TG_CACHE_TTL_HOURS`).
 
 ## Ввод канала
 

@@ -10,14 +10,10 @@ CACHE_DIR="$SCRIPT_DIR/../cache"
 TG_BASE_URL="https://t.me/s"
 TG_REQUEST_DELAY="1.5"
 
-# Default channels — AI/tech community digest (профсоюз)
-DEFAULT_CHANNELS="countwithsasha,evilfreelancer,aostrikov_ai_agents,tips_ai,neuraldeep,oestick,max_about_ai,kdoronin_blog,nobilix,the_ai_architect,dealerAI,gleb_pro_ai,elkornacio,etechlead,NGI_ru"
-
 load_config() {
     if [ -f "$CONFIG_FILE" ]; then
         . "$CONFIG_FILE"
     fi
-    TG_CACHE_TTL_HOURS="${TG_CACHE_TTL_HOURS:-6}"
 }
 # --------------- Input normalization ---------------
 # Accepts: username, @username, https://t.me/username, https://t.me/s/username, t.me/username
@@ -44,17 +40,6 @@ cache_dir_for_channel() {
     local dir="$CACHE_DIR/channels/$1"
     mkdir -p "$dir/raw"
     echo "$dir"
-}
-
-cache_is_fresh() {
-    if [ ! -f "$1" ] || [ ! -s "$1" ]; then
-        return 1
-    fi
-    local ttl_seconds=$(( TG_CACHE_TTL_HOURS * 3600 ))
-    local file_mod
-    file_mod=$(stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0)
-    local file_age=$(( $(date +%s) - file_mod ))
-    [ "$file_age" -lt "$ttl_seconds" ]
 }
 
 tg_fetch() {
@@ -114,14 +99,10 @@ fetch_channel_pages() {
 
         local page_file="$cache_dir/raw/page_${before:-latest}.html"
 
-        if [ -z "$NO_CACHE" ] && cache_is_fresh "$page_file"; then
-            : # use cached
-        else
-            tg_fetch "$url" > "$page_file"
-            if [ ! -s "$page_file" ]; then
-                echo "Error: Empty response from $url" >&2
-                break
-            fi
+        tg_fetch "$url" > "$page_file"
+        if [ ! -s "$page_file" ]; then
+            echo "Error: Empty response from $url" >&2
+            break
         fi
 
         local page_tsv="$cache_dir/raw/page_${before:-latest}.tsv"
@@ -189,7 +170,6 @@ parse_common_params() {
     QUERY=""
     SORT_BY="views"
     CSV_OUT=""
-    NO_CACHE=""
     PERIOD=""
 
     while [ $# -gt 0 ]; do
@@ -202,7 +182,6 @@ parse_common_params() {
             --query)       QUERY="$2"; shift 2 ;;
             --sort)        SORT_BY="$2"; shift 2 ;;
             --csv)         CSV_OUT="$2"; shift 2 ;;
-            --no-cache)    NO_CACHE="1"; shift ;;
             --period)      PERIOD="$2"; shift 2 ;;
             *)             shift ;;
         esac
@@ -222,7 +201,8 @@ require_channels() {
         if [ -n "$TG_CHANNELS" ]; then
             CHANNELS="$TG_CHANNELS"
         else
-            CHANNELS="$DEFAULT_CHANNELS"
+            echo "Error: --channels required. Copy config/.env.example to config/.env or pass --channels \"ch1,ch2\"." >&2
+            exit 1
         fi
     fi
     # Normalize each channel in the list
