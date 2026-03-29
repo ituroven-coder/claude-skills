@@ -13,14 +13,45 @@ function clean_text(t) {
     gsub(/[\t\n\r]+/, " ", t)
     # Convert tg_spoiler class
     gsub(/class="tg_spoiler"/, "class=\"tg-spoiler\"", t)
-    # Convert Telegram blockquote wrapper
-    gsub(/<div[^>]*class="[^"]*quote[^"]*"[^>]*>/, "<blockquote>", t)
-    # Strip div tags
+    # Convert Telegram blockquote: opening div → <blockquote>, its closing </div> → </blockquote>
+    # Mark quote-divs before stripping all divs
+    gsub(/<div[^>]*class="[^"]*quote[^"]*"[^>]*>/, "<!BQ>", t)
+    # Strip all div tags (open and close)
     gsub(/<\/?div[^>]*>/, "", t)
+    # Now restore blockquotes — each <!BQ> needs a closing tag
+    # Simple approach: replace markers, then ensure balanced tags
+    gsub(/<!BQ>/, "<blockquote>", t)
+    # Ensure all blockquotes are closed — count and append missing closers
+    {
+        _open = 0; _close = 0
+        _tmp = t
+        while (match(_tmp, /<blockquote>/)) { _open++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        _tmp = t
+        while (match(_tmp, /<\/blockquote>/)) { _close++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        while (_close < _open) { t = t "</blockquote>"; _close++ }
+    }
     # Preserve spoiler spans, remove all other spans
     gsub(/<span[^>]*tg-spoiler[^>]*>/, "<!SPOILER>", t)
     gsub(/<\/?span[^>]*>/, "", t)
     gsub(/<!SPOILER>/, "<span class=\"tg-spoiler\">", t)
+    # Ensure spoiler spans are closed
+    {
+        _open = 0; _close = 0
+        _tmp = t
+        while (match(_tmp, /<span[^>]*>/)) { _open++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        _tmp = t
+        while (match(_tmp, /<\/span>/)) { _close++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        while (_close < _open) { t = t "</span>"; _close++ }
+    }
+    # Ensure pre tags are closed
+    {
+        _open = 0; _close = 0
+        _tmp = t
+        while (match(_tmp, /<pre[^>]*>/)) { _open++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        _tmp = t
+        while (match(_tmp, /<\/pre>/)) { _close++; _tmp = substr(_tmp, RSTART + RLENGTH) }
+        while (_close < _open) { t = t "</pre>"; _close++ }
+    }
     # Clean leftover attrs except href and class
     gsub(/ style="[^"]*"/, "", t)
     gsub(/ dir="[^"]*"/, "", t)
