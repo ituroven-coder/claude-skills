@@ -67,7 +67,7 @@ TG_CHANNELS_CRYPTO=channel1,channel2
    ```bash
    bash scripts/fetch_posts.sh --channel countwithsasha --limit 50
    ```
-   Выведет последние 50 постов в TSV (id, date, views, forwards, text_preview).
+   Выведет последние 50 постов в TSV (id, date, views, reactions, fwd_from, fwd_link, text, media_url).
 
 2. **Инфо о канале:**
    ```bash
@@ -81,7 +81,7 @@ TG_CHANNELS_CRYPTO=channel1,channel2
 
 4. **Топ постов (шер-парад):**
    ```bash
-   bash scripts/top_posts.sh --channel countwithsasha --limit 50 --sort forwards
+   bash scripts/top_posts.sh --channel countwithsasha --limit 50 --sort reactions
    ```
 
 5. **Расписание публикаций:**
@@ -149,7 +149,7 @@ bash scripts/<script>.sh --channel <username> [--limit N] [--before <post_id>] [
 | `fetch_posts.sh` | Посты канала → TSV | `--limit`, `--before`, `--after-date YYYY-MM-DD` |
 | `channel_info.sh` | Название, описание, подписчики | — |
 | `search_posts.sh` | Полнотекстовый поиск | `--query "text"` |
-| `top_posts.sh` | Ранжирование постов | `--sort views\|forwards\|reactions`, `--limit` |
+| `top_posts.sh` | Ранжирование постов | `--sort views\|reactions`, `--limit` |
 | `posting_schedule.sh` | Анализ времени публикаций | `--limit` |
 | `export_csv.sh` | Экспорт в CSV | `--csv path` |
 | `digest.sh` | Дайджест нескольких каналов | `--channels "a,b,c"`, `--period today\|yesterday\|week\|N` |

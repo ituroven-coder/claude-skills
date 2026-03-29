@@ -66,7 +66,8 @@ for _channel in $CHANNELS; do
         sub(/:00$/, "", time)
 
         # Truncate text to 120 chars for digest
-        text = $6
+        # TSV cols: $1=id $2=date $3=views $4=reactions $5=fwd_from $6=fwd_link $7=text $8=media_url
+        text = $7
         if (length(text) > 120) text = substr(text, 1, 120) "..."
 
         printf "  %s | %s views | %s\n", time, $3, text

@@ -24,7 +24,7 @@ if [ ! -s "$_posts_file" ]; then
     fetch_channel_pages "$CHANNEL" "$LIMIT" "" "" > "$_posts_file"
 fi
 
-echo "id	date	views	forwards	reactions	text_preview"
+echo "id	date	views	reactions	fwd_from	fwd_link	text	media_url"
 
 # Case-insensitive grep
 _result=$(grep -i "$QUERY" "$_posts_file" 2>/dev/null || true)

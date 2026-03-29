@@ -19,16 +19,15 @@ if [ ! -s "$_posts_file" ]; then
     fetch_channel_pages "$CHANNEL" "$LIMIT" "" "" > "$_posts_file"
 fi
 
-# Determine sort column: 3=views, 4=forwards, 5=reactions
+# Determine sort column: $3=views, $4=reactions
 case "$SORT_BY" in
-    views|view)       _sort_col=3 ;;
-    forwards|forward|fwd|shares|share) _sort_col=4 ;;
-    reactions|reaction|react)          _sort_col=5 ;;
-    *)                _sort_col=3 ;;
+    views|view)                        _sort_col=3 ;;
+    reactions|reaction|react)          _sort_col=4 ;;
+    *)                                 _sort_col=3 ;;
 esac
 
 echo "=== Top posts by $SORT_BY for @$CHANNEL ==="
-echo "rank	id	date	views	forwards	reactions	text_preview"
+echo "rank	id	date	views	reactions	fwd_from	fwd_link	text	media_url"
 
 # Normalize K/M values and sort numerically descending
 awk -F'\t' -v col="$_sort_col" '
@@ -58,26 +57,24 @@ awk -F'\t' -v col="$_sort_col" '
 '
 
 # Engagement summary
+# TSV cols: $1=id $2=date $3=views $4=reactions
 echo "" >&2
 echo "--- Engagement summary ---" >&2
 awk -F'\t' '
 {
     gsub(/[[:space:]]/, "", $3)
     gsub(/[[:space:]]/, "", $4)
-    v = $3; f = $4
-    # Normalize
+    v = $3; r = $4
     if (v ~ /[Kk]$/) { sub(/[Kk]$/, "", v); v = v * 1000 }
     if (v ~ /[Mm]$/) { sub(/[Mm]$/, "", v); v = v * 1000000 }
-    if (f ~ /[Kk]$/) { sub(/[Kk]$/, "", f); f = f * 1000 }
-    if (f ~ /[Mm]$/) { sub(/[Mm]$/, "", f); f = f * 1000000 }
+    if (r + 0 > 0) total_r += r
     total_views += v
-    total_fwds += f
     n++
 }
 END {
     if (n > 0) {
-        printf "Posts: %d | Avg views: %d | Avg forwards: %d", n, total_views/n, total_fwds/n
-        if (total_views > 0) printf " | Share rate: %.1f%%", (total_fwds/total_views)*100
+        printf "Posts: %d | Avg views: %d | Avg reactions: %d", n, total_views/n, total_r/n
+        if (total_views > 0) printf " | Reaction rate: %.1f%%", (total_r/total_views)*100
         printf "\n"
     }
 }
