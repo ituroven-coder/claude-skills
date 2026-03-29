@@ -14,7 +14,7 @@ _cache_dir=$(cache_dir_for_channel "$CHANNEL")
 _posts_file="$_cache_dir/posts.tsv"
 
 # Header for output
-echo "id	date	views	forwards	reactions	text_preview"
+echo "id	date	views	reactions	fwd_from	fwd_link	text_preview	media_url"
 
 # Fetch with pagination
 _result=$(fetch_channel_pages "$CHANNEL" "$LIMIT" "$BEFORE" "$AFTER_DATE")
@@ -30,10 +30,10 @@ echo "$_result" > "$_posts_file"
 # Export to CSV if requested
 if [ -n "$CSV_OUT" ]; then
     {
-        echo "id,date,views,forwards,reactions,text_preview"
+        echo "id,date,views,reactions,fwd_from,fwd_link,text_preview,media_url"
         echo "$_result" | awk -F'\t' '{
-            gsub(/"/, "\"\"", $6)
-            printf "%s,%s,%s,%s,%s,\"%s\"\n", $1, $2, $3, $4, $5, $6
+            gsub(/"/, "\"\"", $7)
+            printf "%s,%s,%s,%s,%s,%s,\"%s\",%s\n", $1, $2, $3, $4, $5, $6, $7, $8
         }'
     } > "$CSV_OUT"
     echo "Exported to: $CSV_OUT" >&2

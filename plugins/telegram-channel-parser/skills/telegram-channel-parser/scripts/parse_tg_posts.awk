@@ -1,12 +1,13 @@
 #!/usr/bin/awk -f
 # parse_tg_posts.awk — extract posts from Telegram web preview HTML
-# Output: id \t date \t views \t reactions \t fwd_from \t fwd_link \t text_preview
+# Output: id \t date \t views \t reactions \t fwd_from \t fwd_link \t text_preview \t media_url
 #
 # Note: t.me/s/ does NOT expose share/forward COUNTS (only available via MTProto).
 # fwd_from = channel name this post was forwarded from (empty if original)
 # fwd_link = link to original post (empty if original)
+# media_url = first image/video thumbnail URL (empty if no media)
 
-BEGIN { OFS = "\t"; id = ""; date = ""; views = ""; text = ""; reactions = 0; fwd_from = ""; fwd_link = "" }
+BEGIN { OFS = "\t"; id = ""; date = ""; views = ""; text = ""; reactions = 0; fwd_from = ""; fwd_link = ""; media_url = "" }
 
 /data-post=/ {
     if (id != "") {
@@ -15,9 +16,9 @@ BEGIN { OFS = "\t"; id = ""; date = ""; views = ""; text = ""; reactions = 0; fw
         if (length(text) > 200) text = substr(text, 1, 200) "..."
         gsub(/[[:space:]]/, "", views)
         if (reactions == 0) reactions = ""
-        print id, date, views, reactions, fwd_from, fwd_link, text
+        print id, date, views, reactions, fwd_from, fwd_link, text, media_url
     }
-    id = ""; date = ""; views = ""; text = ""; reactions = 0; fwd_from = ""; fwd_link = ""
+    id = ""; date = ""; views = ""; text = ""; reactions = 0; fwd_from = ""; fwd_link = ""; media_url = ""
     tmp = $0
     sub(/.*data-post="[^"]*\//, "", tmp)
     sub(/".*/, "", tmp)
@@ -56,6 +57,22 @@ id != "" && /tgme_widget_message_forwarded_from_name/ && fwd_from == "" {
     if (tmp != "") fwd_from = tmp
 }
 
+# Media — extract first image URL from background-image:url('...')
+id != "" && /tgme_widget_message_photo_wrap/ && media_url == "" {
+    tmp = $0
+    if (match(tmp, /background-image:url\('[^']+'\)/)) {
+        media_url = substr(tmp, RSTART + 22, RLENGTH - 24)
+    }
+}
+
+# Video thumbnail
+id != "" && /tgme_widget_message_video_thumb/ && media_url == "" {
+    tmp = $0
+    if (match(tmp, /background-image:url\('[^']+'\)/)) {
+        media_url = substr(tmp, RSTART + 22, RLENGTH - 24)
+    }
+}
+
 id != "" && /tgme_widget_message_text/ && text == "" {
     tmp = $0
     gsub(/<br[\/]?>/, " ", tmp)
@@ -89,6 +106,6 @@ END {
         if (length(text) > 200) text = substr(text, 1, 200) "..."
         gsub(/[[:space:]]/, "", views)
         if (reactions == 0) reactions = ""
-        print id, date, views, reactions, fwd_from, fwd_link, text
+        print id, date, views, reactions, fwd_from, fwd_link, text, media_url
     }
 }

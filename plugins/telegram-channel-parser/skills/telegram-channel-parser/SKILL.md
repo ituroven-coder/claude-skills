@@ -15,9 +15,17 @@ description: |
 
 ## Config
 
-Никаких токенов не требуется. Опциональные настройки в `config/.env`:
-- `TG_CHANNELS` — список каналов для дайджеста (через запятую)
-- `TG_CACHE_TTL_HOURS` — время жизни кеша в часах (default: 6)
+Никаких токенов не требуется. Скилл работает из коробки — дефолтный набор AI/tech каналов уже зашит.
+
+**Приоритет каналов:**
+1. `--channels "a,b,c"` — явный параметр (высший приоритет)
+2. `TG_CHANNELS` из `config/.env` — пользовательский набор
+3. Встроенный community-список — дефолт (работает без конфига)
+
+**Определение каналов агентом:**
+- Пользователь назвал канал(ы) явно → передать через `--channel` / `--channels`
+- Пользователь попросил дайджест без уточнения → запустить без `--channels` (используется дефолтный набор)
+- Пользователь хочет свои каналы навсегда → `cp config/.env.example config/.env` и отредактировать
 
 Подробности: `config/README.md`.
 
@@ -66,12 +74,14 @@ description: |
 ### Дайджест по нескольким каналам
 
 ```bash
+# Явный список каналов
 bash scripts/digest.sh --channels "countwithsasha,evilfreelancer,aostrikov_ai_agents" --period today
+
+# Дефолтный набор (без --channels)
+bash scripts/digest.sh --period today
 ```
 
 Периоды: `today`, `yesterday`, `week`, `N` (последние N дней).
-
-Выведет компактный дайджест: по каждому каналу — свежие посты за период с превью текста.
 
 ### Сравнение каналов
 
@@ -80,6 +90,29 @@ bash scripts/compare_channels.sh --channels "channel1,channel2,channel3" --limit
 ```
 
 Таблица: подписчики, средние просмотры, частота публикаций, engagement.
+
+## React-артифакт для дайджеста
+
+При запросе дайджеста — **отображай результаты как React-артифакт** (лента карточек).
+
+**Алгоритм:**
+1. Запусти `digest.sh` для нужных каналов и периода
+2. Запусти `channel_info.sh` для каждого канала (название, подписчики)
+3. Прочитай шаблон: `assets/digest-feed.tsx`
+4. Подставь данные в `POSTS_DATA` и `CHANNELS` в шаблоне
+5. Отрендери как React-артифакт
+
+**Формат данных для подстановки:**
+```typescript
+// POSTS_DATA — массив постов из TSV вывода digest.sh
+// TSV колонки: id \t date \t views \t reactions \t fwd_from \t fwd_link \t text \t media_url
+{ id: "123", channel: "countwithsasha", date: "2026-03-29T14:30:00+00:00", views: "1.2K", reactions: "45", text: "...", mediaUrl: "https://cdn..." }
+
+// CHANNELS — инфо о каналах из channel_info.sh
+{ countwithsasha: { title: "Count With Sasha", subscribers: "12K" } }
+```
+
+Посты автоматически сортируются по дате (новые сверху), перемешаны между каналами. Пользователь фильтрует по периоду и каналу через UI.
 
 ## Scripts
 
@@ -104,7 +137,7 @@ bash scripts/<script>.sh --channel <username> [--limit N] [--before <post_id>] [
 | Param | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `--channel` | да* | — | Username канала (без @) |
-| `--channels` | да* | — | Несколько каналов через запятую |
+| `--channels` | нет | community list | Несколько каналов через запятую |
 | `--limit` | нет | 20 | Сколько постов загрузить |
 | `--before` | нет | — | ID поста для пагинации |
 | `--after-date` | нет | — | Не загружать посты старше даты (YYYY-MM-DD) |
@@ -116,35 +149,13 @@ bash scripts/<script>.sh --channel <username> [--limit N] [--before <post_id>] [
 ## Кеш-стратегия
 
 Кеш хранится в `cache/`:
-- `channels/<username>/posts.tsv` — посты (id, date, views, reactions, fwd_from, fwd_link, text)
+- `channels/<username>/posts.tsv` — посты (id, date, views, reactions, fwd_from, fwd_link, text, media_url)
 - `channels/<username>/info.json` — метаданные канала
 - `channels/<username>/raw/*.html` — сырой HTML страниц (для повторного парсинга)
 
 Для поиска по кешу: `grep "text" cache/channels/*/posts.tsv`.
 
 TTL кеша: 6 часов (настраивается через `TG_CACHE_TTL_HOURS`).
-
-## Дайджест-проект
-
-Для ежедневных дайджестов создай `config/.env`:
-```
-TG_CHANNELS=countwithsasha,evilfreelancer,aostrikov_ai_agents,tips_ai,gonzo_ML
-```
-
-И запускай:
-```bash
-bash scripts/digest.sh --period today
-```
-
-Claude получит компактный список новых постов по каждому каналу и соберёт аналитический дайджест с ключевыми темами дня.
-
-### Сценарий: cron + агент
-
-В Cowork или OpenClaw настрой ежедневный запуск:
-```
-Каждый день в 21:00 — собери дайджест каналов из config/.env за сегодня.
-Выдели 3-5 ключевых тем, отметь пересечения между каналами.
-```
 
 ## Ввод канала
 

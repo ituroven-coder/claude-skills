@@ -26,11 +26,11 @@ fi
 
 # Convert TSV to CSV with proper escaping
 {
-    echo "id,date,views,forwards,reactions,text_preview,url"
+    echo "id,date,views,reactions,fwd_from,fwd_link,text_preview,media_url,url"
     awk -F'\t' -v ch="$CHANNEL" '{
-        gsub(/"/, "\"\"", $6)
+        gsub(/"/, "\"\"", $7)
         url = "https://t.me/" ch "/" $1
-        printf "%s,%s,%s,%s,%s,\"%s\",%s\n", $1, $2, $3, $4, $5, $6, url
+        printf "%s,%s,%s,%s,%s,%s,\"%s\",%s,%s\n", $1, $2, $3, $4, $5, $6, $7, $8, url
     }' "$_posts_file"
 } > "$CSV_OUT"
 

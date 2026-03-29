@@ -10,6 +10,9 @@ CACHE_DIR="$SCRIPT_DIR/../cache"
 TG_BASE_URL="https://t.me/s"
 TG_REQUEST_DELAY="1.5"
 
+# Default channels — AI/tech community digest (профсоюз)
+DEFAULT_CHANNELS="countwithsasha,evilfreelancer,aostrikov_ai_agents,tips_ai,neuraldeep,oestick,max_about_ai,kdoronin_blog,nobilix,the_ai_architect,dealerAI,gleb_pro_ai,elkornacio,etechlead,NGI_ru"
+
 load_config() {
     if [ -f "$CONFIG_FILE" ]; then
         . "$CONFIG_FILE"
@@ -219,8 +222,7 @@ require_channels() {
         if [ -n "$TG_CHANNELS" ]; then
             CHANNELS="$TG_CHANNELS"
         else
-            echo "Error: --channels is required, or set TG_CHANNELS in config/.env." >&2
-            exit 1
+            CHANNELS="$DEFAULT_CHANNELS"
         fi
     fi
     # Normalize each channel in the list
