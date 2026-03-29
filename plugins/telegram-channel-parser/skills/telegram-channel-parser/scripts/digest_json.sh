@@ -57,10 +57,11 @@ for _channel in $CHANNELS; do
         id = $1; date = $2; views = $3; reactions = $4
         fwd_from = $5; fwd_link = $6; text = $7; media = $8
 
-        # Escape quotes and backslashes in text
+        # Escape for JSON: backslashes first, then quotes, then control chars
         gsub(/\\/, "\\\\", text)
         gsub(/"/, "\\\"", text)
         gsub(/\t/, " ", text)
+        gsub(/\r/, "", text)
 
         gsub(/\\/, "\\\\", fwd_from)
         gsub(/"/, "\\\"", fwd_from)

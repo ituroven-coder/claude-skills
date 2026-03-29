@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 # parse_tg_posts.awk — extract posts from Telegram web preview HTML
-# Output: id \t date \t views \t reactions \t fwd_from \t fwd_link \t text_preview \t media_url
+# Output: id \t date \t views \t reactions \t fwd_from \t fwd_link \t text_html \t media_url
 #
 # Note: t.me/s/ does NOT expose share/forward COUNTS (only available via MTProto).
 # fwd_from = channel name this post was forwarded from (empty if original)
@@ -13,7 +13,6 @@ BEGIN { OFS = "\t"; id = ""; date = ""; views = ""; text = ""; reactions = 0; fw
     if (id != "") {
         gsub(/[\t\n\r]+/, " ", text)
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", text)
-        if (length(text) > 200) text = substr(text, 1, 200) "..."
         gsub(/[[:space:]]/, "", views)
         if (reactions == 0) reactions = ""
         print id, date, views, reactions, fwd_from, fwd_link, text, media_url
@@ -75,17 +74,26 @@ id != "" && /tgme_widget_message_video_thumb/ && media_url == "" {
 
 id != "" && /tgme_widget_message_text/ && text == "" {
     tmp = $0
-    gsub(/<br[\/]?>/, " ", tmp)
-    gsub(/<[^>]*>/, "", tmp)
-    gsub(/&amp;/, "\\&", tmp)
-    gsub(/&lt;/, "<", tmp)
-    gsub(/&gt;/, ">", tmp)
-    gsub(/&quot;/, "\"", tmp)
-    gsub(/&#0*36;/, "$", tmp)
-    gsub(/&nbsp;/, " ", tmp)
-    gsub(/&#39;/, "'", tmp)
+    # Strip the outer wrapper div, keep inner HTML
+    sub(/.*tgme_widget_message_text[^>]*>/, "", tmp)
+    sub(/<\/div>.*/, "", tmp)
+    # Normalize whitespace
     gsub(/[[:space:]]+/, " ", tmp)
     gsub(/^[[:space:]]+|[[:space:]]+$/, "", tmp)
+    # Convert tg_spoiler class to our tg-spoiler
+    gsub(/class="tg_spoiler"/, "class=\"tg-spoiler\"", tmp)
+    # Convert Telegram blockquote wrapper
+    gsub(/<div[^>]*class="[^"]*quote[^"]*"[^>]*>/, "<blockquote>", tmp)
+    gsub(/<\/div>/, "", tmp)
+    # Strip unsafe tags but keep: a, b, strong, i, em, s, del, code, pre, br, blockquote, span.tg-spoiler
+    gsub(/<\/?div[^>]*>/, "", tmp)
+    # Remove non-spoiler spans
+    gsub(/<span[^>]*tg-spoiler[^>]*>/, "<!SPOILER>", tmp)
+    gsub(/<\/?span[^>]*>/, "", tmp)
+    gsub(/<!SPOILER>/, "<span class=\"tg-spoiler\">", tmp)
+    # Clean leftover attrs except href and class
+    gsub(/ style="[^"]*"/, "", tmp)
+    gsub(/ dir="[^"]*"/, "", tmp)
     if (tmp != "") text = tmp
 }
 
@@ -103,7 +111,6 @@ END {
     if (id != "") {
         gsub(/[\t\n\r]+/, " ", text)
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", text)
-        if (length(text) > 200) text = substr(text, 1, 200) "..."
         gsub(/[[:space:]]/, "", views)
         if (reactions == 0) reactions = ""
         print id, date, views, reactions, fwd_from, fwd_link, text, media_url
