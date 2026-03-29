@@ -83,10 +83,6 @@ function PostRow({ post }: { post: Post }) {
   const displayText = !expanded && needsTruncate ? post.text.slice(0, 140) + "..." : post.text;
   const showMedia = post.mediaUrl && !imgError;
 
-  const openPost = () => {
-    try { window.open(postUrl, "_blank"); } catch { /* sandbox restriction */ }
-  };
-
   return (
     <div style={{ padding: "10px 0", borderBottom: "1px solid #f0f0f0" }}>
       {/* Header: initial + channel + time */}
@@ -145,12 +141,10 @@ function PostRow({ post }: { post: Post }) {
         {post.views && <span>👁 {post.views}</span>}
         {post.reactions && <span>❤️ {post.reactions}</span>}
         <span style={{ flex: 1 }} />
-        <span
-          onClick={openPost}
-          style={{ color: "#2AABEE", cursor: "pointer", userSelect: "none" }}
-        >
+        <a href={postUrl} target="_blank" rel="noopener noreferrer"
+          style={{ color: "#2AABEE", textDecoration: "none", cursor: "pointer" }}>
           Открыть →
-        </span>
+        </a>
       </div>
     </div>
   );
