@@ -118,18 +118,17 @@ bash scripts/compare_channels.sh --channels "channel1,channel2,channel3" --limit
 
 При запросе дайджеста — **отображай результаты как React-артифакт** (лента карточек).
 
-**Алгоритм (3 шага):**
-1. Запусти `digest_json.sh` — он выдаст готовый JSON:
+**Алгоритм (4 шага):**
+1. Запусти `digest_json.sh` — он **пишет JSON в файл** (не stdout!) и возвращает путь:
    ```bash
    bash scripts/digest_json.sh --period today
+   # → prints: cache/digest_today.json
    ```
-2. Прочитай шаблон `assets/digest-feed.tsx`
-3. Замени `__DIGEST_DATA__` в шаблоне на JSON из шага 1, отрендери как React-артифакт
+2. Прочитай JSON-файл по выведенному пути
+3. Прочитай шаблон `assets/digest-feed.tsx`
+4. Замени `__DIGEST_DATA__` в шаблоне на содержимое JSON, отрендери как React-артифакт
 
-**Пример вывода `digest_json.sh`:**
-```json
-{"posts":[{"id":"123","channel":"countwithsasha","date":"2026-03-29T14:30:00+00:00","views":"1.2K","reactions":"45","text":"...","mediaUrl":"https://cdn..."}],"channels":{"countwithsasha":{"title":"Count With Sasha","subscribers":"12K"}}}
-```
+**Важно:** скрипт пишет в файл, а не в stdout, чтобы обойти лимит буфера sandbox (~200KB). Для 30-дневного дайджеста 15 каналов JSON может быть 500KB+.
 
 Посты автоматически сортируются по дате (новые сверху), перемешаны между каналами. Пользователь фильтрует по периоду и каналу через UI.
 
@@ -149,7 +148,7 @@ bash scripts/<script>.sh --channel <username> [--limit N] [--before <post_id>] [
 | `posting_schedule.sh` | Анализ времени публикаций | `--limit` |
 | `export_csv.sh` | Экспорт в CSV | `--csv path` |
 | `digest.sh` | Дайджест нескольких каналов | `--channels "a,b,c"`, `--period today\|yesterday\|week\|N` |
-| `digest_json.sh` | Дайджест → JSON (для React-артифакта) | `--channels "a,b,c"`, `--period today\|yesterday\|week\|N` |
+| `digest_json.sh` | Дайджест → JSON файл (для React-артифакта) | `--channels "a,b,c"`, `--period today\|yesterday\|week\|N` |
 | `compare_channels.sh` | Сравнительная таблица | `--channels "a,b,c"` |
 
 ## Общие параметры

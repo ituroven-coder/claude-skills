@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Digest as JSON — ready to inject into React artifact
-# Usage: bash scripts/digest_json.sh --period today [--channels "ch1,ch2"]
-# Output: JSON with { posts: [...], channels: {...} }
+# Usage: bash scripts/digest_json.sh --period today [--channels "ch1,ch2"] [--out path]
+# Output: writes JSON file, prints path to stdout
+# JSON shape: { "posts": [...], "channels": {...} }
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -21,9 +22,17 @@ if [ -z "$_after_date" ]; then
     exit 1
 fi
 
-# Collect all posts and channel info as JSON
-_all_posts=""
-_all_channels=""
+# Output file — user can override with --csv (reusing the flag)
+_out_dir="$CACHE_DIR"
+mkdir -p "$_out_dir"
+_outfile="${CSV_OUT:-$_out_dir/digest_${PERIOD}.json}"
+
+# Temp files for streaming — avoid bash variable limits
+_posts_tmp="${TMPDIR:-/tmp}/tg_posts_$$.jsonl"
+_channels_tmp="${TMPDIR:-/tmp}/tg_channels_$$.jsonl"
+trap 'rm -f "$_posts_tmp" "$_channels_tmp"' EXIT
+: > "$_posts_tmp"
+: > "$_channels_tmp"
 
 _old_ifs="$IFS"
 IFS=','
@@ -34,30 +43,26 @@ for _channel in $CHANNELS; do
     _cache_dir=$(cache_dir_for_channel "$_channel")
     _html_file="$_cache_dir/raw/page_latest.html"
 
-    # Fetch page (used for both posts and channel info)
+    # Fetch page
     tg_fetch "${TG_BASE_URL}/${_channel}" > "$_html_file" 2>/dev/null || true
 
-    # Channel info
+    # Channel info → append to channels temp
     if [ -s "$_html_file" ]; then
         _info=$(parse_channel_info_from_html "$_html_file")
         _title=$(echo "$_info" | sed 's/.*"title":"//;s/".*//')
         _subs=$(echo "$_info" | sed 's/.*"subscribers":"//;s/".*//')
-        if [ -n "$_all_channels" ]; then _all_channels="${_all_channels},"; fi
-        _all_channels="${_all_channels}\"${_channel}\":{\"title\":\"${_title}\",\"subscribers\":\"${_subs}\"}"
+        printf '"%s":{"title":"%s","subscribers":"%s"}\n' "$_channel" "$_title" "$_subs" >> "$_channels_tmp"
     fi
 
-    # Posts
+    # Posts → stream TSV through awk → append JSONL to posts temp
     _result=$(fetch_channel_pages "$_channel" "50" "" "$_after_date" 2>/dev/null) || true
     [ -z "$_result" ] && continue
 
-    # Convert TSV to JSON objects
-    # TSV: $1=id $2=date $3=views $4=reactions $5=fwd_from $6=fwd_link $7=text $8=media_url
-    _posts_json=$(echo "$_result" | awk -F'\t' -v ch="$_channel" '
+    echo "$_result" | awk -F'\t' -v ch="$_channel" '
     {
         id = $1; date = $2; views = $3; reactions = $4
         fwd_from = $5; fwd_link = $6; text = $7; media = $8
 
-        # Escape for JSON: backslashes first, then quotes, then control chars
         gsub(/\\/, "\\\\", text)
         gsub(/"/, "\\\"", text)
         gsub(/\t/, " ", text)
@@ -73,16 +78,23 @@ for _channel in $CHANNELS; do
         if (media != "") printf ",\"mediaUrl\":\"%s\"", media
 
         printf ",\"text\":\"%s\"}\n", text
-    }')
+    }' >> "$_posts_tmp"
 
-    if [ -n "$_posts_json" ]; then
-        # Join with commas
-        _comma_posts=$(echo "$_posts_json" | paste -sd ',' -)
-        if [ -n "$_all_posts" ]; then _all_posts="${_all_posts},"; fi
-        _all_posts="${_all_posts}${_comma_posts}"
-    fi
+    echo "  @$_channel: done" >&2
 done
 IFS="$_old_ifs"
 
-# Output final JSON
-printf '{"posts":[%s],"channels":{%s}}\n' "$_all_posts" "$_all_channels"
+# Assemble final JSON from temp files → write directly to output file
+{
+    printf '{"posts":['
+    # Join JSONL lines with commas
+    awk 'NR>1{printf ","}{printf "%s",$0}' "$_posts_tmp"
+    printf '],"channels":{'
+    awk 'NR>1{printf ","}{printf "%s",$0}' "$_channels_tmp"
+    printf '}}\n'
+} > "$_outfile"
+
+_size=$(wc -c < "$_outfile" | tr -d ' ')
+_count=$(wc -l < "$_posts_tmp" | tr -d ' ')
+echo "Digest: $_count posts, ${_size} bytes → $_outfile" >&2
+echo "$_outfile"
