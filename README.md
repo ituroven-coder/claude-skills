@@ -22,6 +22,8 @@
   - [yandex-webmaster](#yandex-webmaster) — управление сайтами в Яндекс.Вебмастере
   - [telegraph-publisher](#telegraph-publisher) — публикация в Telegraph
   - [crawl4ai-seo](#crawl4ai-seo) — SEO-краулер сайтов
+  - [telegram-channel-parser](#telegram-channel-parser) — парсинг Telegram-каналов
+  - [github-pages-publisher](#github-pages-publisher) — публикация на GitHub Pages
 - [Структура репозитория](#структура-репозитория)
 - [Лицензия](#лицензия)
 
@@ -47,6 +49,8 @@
 /plugin install yandex-webmaster
 /plugin install telegraph-publisher
 /plugin install crawl4ai-seo
+/plugin install telegram-channel-parser
+/plugin install github-pages-publisher
 ```
 
 ### Ручная установка (без маркетплейса)
@@ -336,6 +340,49 @@ SEO-краулер сайтов на базе Crawl4AI.
 
 ---
 
+### [telegram-channel-parser](plugins/telegram-channel-parser/skills/telegram-channel-parser)
+
+Парсинг публичных Telegram-каналов через веб-превью (t.me/s/).
+
+- Посты канала с метриками (просмотры, реакции, пересылки)
+- Дайджест по нескольким каналам за период
+- Топ постов (шер-парад), поиск, расписание публикаций
+- Сравнительная таблица каналов
+- Cache-first подход, zero config, без API-ключей
+
+**Триггеры (RU):**
+- "парсинг телеграм канала"
+- "дайджест каналов"
+- "анализ канала"
+
+**Триггеры (EN):**
+- "telegram channel"
+- "telegram digest"
+- "telegram analytics"
+
+---
+
+### [github-pages-publisher](plugins/github-pages-publisher/skills/github-pages-publisher)
+
+Публикация статических артифактов на GitHub Pages.
+
+- Деплой в структуру `YYYY/YYYY-MM/page-slug/`
+- Viewport-валидация перед публикацией (desktop 1440px, mobile 375px)
+- Slugify заголовков, автоматический `index.html` entrypoint
+- Fine-grained GitHub token для безопасного пуша
+
+**Триггеры (RU):**
+- "опубликуй на GitHub Pages"
+- "задеплой страницу"
+- "залей артифакт"
+
+**Триггеры (EN):**
+- "publish to GitHub Pages"
+- "deploy static page"
+- "push artifact to Pages"
+
+---
+
 ## Структура репозитория
 
 ```
@@ -355,7 +402,9 @@ polyakov-claude-skills/
 │   ├── yandex-metrika/       # Плагин для аналитики Yandex Metrika
 │   ├── yandex-webmaster/     # Плагин для Yandex Webmaster API
 │   ├── telegraph-publisher/  # Плагин для публикации в Telegraph
-│   └── crawl4ai-seo/         # Плагин для SEO-краулинга
+│   ├── crawl4ai-seo/         # Плагин для SEO-краулинга
+│   ├── telegram-channel-parser/ # Плагин для парсинга Telegram-каналов
+│   └── github-pages-publisher/  # Плагин для публикации на GitHub Pages
 └── README.md
 ```
 
