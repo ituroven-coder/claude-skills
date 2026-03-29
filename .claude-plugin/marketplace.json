@@ -96,6 +96,12 @@
       "description": "Публикация статических артифактов на GitHub Pages с YYYY/YYYY-MM структурой и viewport-валидацией",
       "source": "./plugins/github-pages-publisher",
       "category": "development"
+    },
+    {
+      "name": "sourcecraft-publisher",
+      "description": "Публикация статических артифактов на SourceCraft Sites (Yandex, работает в России)",
+      "source": "./plugins/sourcecraft-publisher",
+      "category": "development"
     }
   ]
 }

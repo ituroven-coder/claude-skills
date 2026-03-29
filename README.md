@@ -24,6 +24,7 @@
   - [crawl4ai-seo](#crawl4ai-seo) — SEO-краулер сайтов
   - [telegram-channel-parser](#telegram-channel-parser) — парсинг Telegram-каналов
   - [github-pages-publisher](#github-pages-publisher) — публикация на GitHub Pages
+  - [sourcecraft-publisher](#sourcecraft-publisher) — публикация на SourceCraft Sites
 - [Структура репозитория](#структура-репозитория)
 - [Лицензия](#лицензия)
 
@@ -51,6 +52,7 @@
 /plugin install crawl4ai-seo
 /plugin install telegram-channel-parser
 /plugin install github-pages-publisher
+/plugin install sourcecraft-publisher
 ```
 
 ### Ручная установка (без маркетплейса)
@@ -383,6 +385,26 @@ SEO-краулер сайтов на базе Crawl4AI.
 
 ---
 
+### [sourcecraft-publisher](plugins/sourcecraft-publisher/skills/sourcecraft-publisher)
+
+Публикация статических артифактов на SourceCraft Sites (Yandex, работает в России).
+
+- Деплой в структуру `YYYY/YYYY-MM/page-slug/`
+- Автоматическое создание `.sourcecraft/sites.yaml`
+- OAuth2 токен для push в SourceCraft
+- Зеркало `github-pages-publisher` для российской инфраструктуры
+
+**Триггеры (RU):**
+- "опубликуй на SourceCraft"
+- "задеплой на сорскрафт"
+- "залей в российское зеркало"
+
+**Триггеры (EN):**
+- "publish to SourceCraft"
+- "deploy to SourceCraft Sites"
+
+---
+
 ## Структура репозитория
 
 ```
@@ -404,7 +426,8 @@ polyakov-claude-skills/
 │   ├── telegraph-publisher/  # Плагин для публикации в Telegraph
 │   ├── crawl4ai-seo/         # Плагин для SEO-краулинга
 │   ├── telegram-channel-parser/ # Плагин для парсинга Telegram-каналов
-│   └── github-pages-publisher/  # Плагин для публикации на GitHub Pages
+│   ├── github-pages-publisher/  # Плагин для публикации на GitHub Pages
+│   └── sourcecraft-publisher/   # Плагин для публикации на SourceCraft Sites
 └── README.md
 ```
 
