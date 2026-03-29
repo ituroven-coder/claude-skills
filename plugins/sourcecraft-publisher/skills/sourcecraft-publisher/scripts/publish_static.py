@@ -5,7 +5,7 @@ Usage:
     python3 scripts/publish_static.py --source <dir-or-html> --slug <name> [--date YYYY-MM-DD] [--message "msg"]
 
 Requires env vars: SOURCECRAFT_TOKEN, SOURCECRAFT_REPO, SOURCECRAFT_SITE_URL
-Optional: SOURCECRAFT_BRANCH (default: master)
+Optional: SOURCECRAFT_BRANCH (default: main)
 """
 import argparse, os, re, shutil, subprocess, sys, tempfile
 from datetime import datetime
@@ -39,7 +39,7 @@ def main():
 
     token = os.environ['SOURCECRAFT_TOKEN']
     repo = os.environ['SOURCECRAFT_REPO']
-    branch = os.environ.get('SOURCECRAFT_BRANCH', 'master')
+    branch = os.environ.get('SOURCECRAFT_BRANCH', 'main')
     base_url = os.environ['SOURCECRAFT_SITE_URL'].rstrip('/')
 
     dt = datetime.fromisoformat(args.date) if args.date else datetime.utcnow()
@@ -54,7 +54,7 @@ def main():
 
     with tempfile.TemporaryDirectory() as td:
         repo_dir = Path(td) / 'repo'
-        remote = f'https://oauth2:{token}@sourcecraft.site/{repo}.git'
+        remote = f'https://oauth2:{token}@git.sourcecraft.dev/{repo}.git'
 
         # Clone — try existing branch, fall back to init if repo is empty
         try:
