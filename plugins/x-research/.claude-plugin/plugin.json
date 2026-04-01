@@ -1,0 +1,8 @@
+{
+  "name": "x-research",
+  "version": "1.0.0",
+  "description": "X/Twitter research via xAI Grok API: digests, thread analysis, trending topics, custom search with x_search tool",
+  "author": {
+    "name": "Polyakov"
+  }
+}
