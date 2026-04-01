@@ -92,6 +92,12 @@
       "category": "productivity"
     },
     {
+      "name": "x-research",
+      "description": "X/Twitter research via xAI Grok API: дайджесты, анализ тредов, трендовые темы, поиск",
+      "source": "./plugins/x-research",
+      "category": "productivity"
+    },
+    {
       "name": "github-pages-publisher",
       "description": "Публикация статических артифактов на GitHub Pages с YYYY/YYYY-MM структурой и viewport-валидацией",
       "source": "./plugins/github-pages-publisher",

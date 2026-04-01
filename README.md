@@ -23,6 +23,7 @@
   - [telegraph-publisher](#telegraph-publisher) — публикация в Telegraph
   - [crawl4ai-seo](#crawl4ai-seo) — SEO-краулер сайтов
   - [telegram-channel-parser](#telegram-channel-parser) — парсинг Telegram-каналов
+  - [x-research](#x-research) — рисерч X/Twitter через xAI Grok API
   - [github-pages-publisher](#github-pages-publisher) — публикация на GitHub Pages
   - [sourcecraft-publisher](#sourcecraft-publisher) — публикация на SourceCraft Sites
 - [Структура репозитория](#структура-репозитория)
@@ -51,6 +52,7 @@
 /plugin install telegraph-publisher
 /plugin install crawl4ai-seo
 /plugin install telegram-channel-parser
+/plugin install x-research
 /plugin install github-pages-publisher
 /plugin install sourcecraft-publisher
 ```
@@ -364,6 +366,28 @@ SEO-краулер сайтов на базе Crawl4AI.
 
 ---
 
+### [x-research](plugins/x-research/skills/x-research)
+
+Рисерч X/Twitter через xAI Grok API с инструментом x_search.
+
+- Дайджест подписок по категориям аккаунтов
+- Анализ постов, тредов, дискуссий (тон, аргументы, реакция комьюнити)
+- Трендовые темы по интересам с оценкой сентимента
+- Произвольный поиск с идеями для постов в Telegram
+- Session artifact store (live-first, immutable snapshots)
+
+**Триггеры (RU):**
+- "дайджест твиттера"
+- "что в твиттере по [теме]"
+- "анализ твита"
+
+**Триггеры (EN):**
+- "x research" / "twitter research"
+- "x digest" / "trending x"
+- "analyze tweet"
+
+---
+
 ### [github-pages-publisher](plugins/github-pages-publisher/skills/github-pages-publisher)
 
 Публикация статических артифактов на GitHub Pages.
@@ -426,6 +450,7 @@ polyakov-claude-skills/
 │   ├── telegraph-publisher/  # Плагин для публикации в Telegraph
 │   ├── crawl4ai-seo/         # Плагин для SEO-краулинга
 │   ├── telegram-channel-parser/ # Плагин для парсинга Telegram-каналов
+│   ├── x-research/              # Плагин для рисерча X/Twitter
 │   ├── github-pages-publisher/  # Плагин для публикации на GitHub Pages
 │   └── sourcecraft-publisher/   # Плагин для публикации на SourceCraft Sites
 └── README.md
