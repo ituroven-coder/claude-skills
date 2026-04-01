@@ -335,8 +335,13 @@ cmd_init() {
     echo "Creating Codex session..." >&2
     printf '\033[1;33m>>> Monitor: tail -f %s\033[0m\n' "$log_file" >&2
 
+    local MODEL_FLAG=()
+    if [[ -n "$CODEX_MODEL" ]]; then
+        MODEL_FLAG=("--model" "$CODEX_MODEL")
+    fi
+
     CODEX_REVIEWER=1 codex exec \
-        --model "$CODEX_MODEL" \
+        "${MODEL_FLAG[@]}" \
         "${YOLO_FLAG[@]}" \
         -o "$output_file" \
         "$prompt" > "$log_file" 2>&1 || {
@@ -432,9 +437,19 @@ cmd_review() {
     echo "Sending $phase for review (iteration ${next_iteration}/${MAX_ITERATIONS})..." >&2
     printf '\033[1;33m>>> Monitor: tail -f %s\033[0m\n' "$log_file" >&2
 
+    local MODEL_FLAG=()
+    if [[ -n "$CODEX_MODEL" ]]; then
+        MODEL_FLAG=("--model" "$CODEX_MODEL")
+    fi
+
+    local REASONING_FLAG=()
+    if [[ -n "$CODEX_REASONING_EFFORT" ]]; then
+        REASONING_FLAG=("-c" "model_reasoning_effort=\"$CODEX_REASONING_EFFORT\"")
+    fi
+
     CODEX_REVIEWER=1 codex exec \
-        --model "$CODEX_MODEL" \
-        -c "model_reasoning_effort=\"$CODEX_REASONING_EFFORT\"" \
+        "${MODEL_FLAG[@]}" \
+        "${REASONING_FLAG[@]}" \
         "${YOLO_FLAG[@]}" \
         -o "$output_file" \
         resume "$SESSION_ID" \
