@@ -37,6 +37,7 @@ verdict_file="$repo_root/.codex-review/$branch_slug/verdict.txt"
 if [ -f "$verdict_file" ]; then
     verdict="$(tr -d '[:space:]' < "$verdict_file")"
     if [ "$verdict" = "APPROVED" ]; then
+        rm -f "$verdict_file"
         cat <<'EOF'
 {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}
 EOF

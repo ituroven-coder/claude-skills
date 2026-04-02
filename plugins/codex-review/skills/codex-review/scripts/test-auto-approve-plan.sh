@@ -86,13 +86,19 @@ esac
 # ============================
 # Test 5: AUTO_REVIEW=true, verdict=APPROVED — allow
 # ============================
-printf "Test 5: AUTO_REVIEW=true, verdict=APPROVED — allow\n"
+printf "Test 5: AUTO_REVIEW=true, verdict=APPROVED — allow + cleanup\n"
 printf 'APPROVED' > ".codex-review/$BRANCH_SLUG/verdict.txt"
 output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
 case "$output" in
     *'"behavior":"allow"'*) assert_output "allow decision" "yes" "yes" ;;
     *) assert_output "allow decision" "contains behavior:allow" "$output" ;;
 esac
+# verdict.txt must be deleted after allow to prevent stale auto-approve
+if [ -f ".codex-review/$BRANCH_SLUG/verdict.txt" ]; then
+    assert_output "verdict.txt deleted after allow" "deleted" "still exists"
+else
+    assert_output "verdict.txt deleted after allow" "yes" "yes"
+fi
 
 # ============================
 # Test 6: AUTO_REVIEW=true, verdict=APPROVED with whitespace — allow
@@ -143,9 +149,28 @@ cd "$TEST_DIR"
 rm -rf "$TEST_DIR2"
 
 # ============================
-# Test 9: plugin.json hook commands use ${CLAUDE_PLUGIN_ROOT}, not relative paths
+# Test 9: stale verdict protection — second call after allow must deny
 # ============================
-printf "Test 9: plugin.json hook paths use CLAUDE_PLUGIN_ROOT\n"
+printf "Test 9: stale verdict protection\n"
+printf 'AUTO_REVIEW=true\n' > .codex-review/config.env
+printf 'APPROVED' > ".codex-review/$BRANCH_SLUG/verdict.txt"
+# First call — allow (and delete verdict.txt)
+output1="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+case "$output1" in
+    *'"behavior":"allow"'*) assert_output "first call: allow" "yes" "yes" ;;
+    *) assert_output "first call: allow" "contains behavior:allow" "$output1" ;;
+esac
+# Second call — must deny (no verdict.txt left)
+output2="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+case "$output2" in
+    *'"behavior":"deny"'*) assert_output "second call: deny (no stale verdict)" "yes" "yes" ;;
+    *) assert_output "second call: deny (no stale verdict)" "contains behavior:deny" "$output2" ;;
+esac
+
+# ============================
+# Test 10: plugin.json hook commands use ${CLAUDE_PLUGIN_ROOT}, not relative paths
+# ============================
+printf "Test 10: plugin.json hook paths use CLAUDE_PLUGIN_ROOT\n"
 PLUGIN_JSON="$SCRIPT_DIR/../../../.claude-plugin/plugin.json"
 if [ -f "$PLUGIN_JSON" ]; then
     # Extract all "command" values from hooks and check for relative paths
