@@ -245,6 +245,7 @@ build_review_prompt() {
     local phase_instructions
     if [[ "$phase" == "plan" ]]; then
         phase_instructions="You are reviewing a proposed implementation plan.
+The full plan text is provided above in 'Description from Claude'. Do NOT read plan files from disk — use the text above as the single source of truth.
 
 Focus areas:
 - Correctness: does the approach solve the stated problem?
