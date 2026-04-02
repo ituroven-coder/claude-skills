@@ -12,7 +12,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./skills/codex-review/scripts/auto-approve-plan.sh"
+            "command": "sh ${CLAUDE_PLUGIN_ROOT}/skills/codex-review/scripts/auto-approve-plan.sh"
           }
         ]
       }

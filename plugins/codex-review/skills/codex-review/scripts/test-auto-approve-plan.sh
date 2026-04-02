@@ -143,6 +143,23 @@ cd "$TEST_DIR"
 rm -rf "$TEST_DIR2"
 
 # ============================
+# Test 9: plugin.json hook commands use ${CLAUDE_PLUGIN_ROOT}, not relative paths
+# ============================
+printf "Test 9: plugin.json hook paths use CLAUDE_PLUGIN_ROOT\n"
+PLUGIN_JSON="$SCRIPT_DIR/../../../.claude-plugin/plugin.json"
+if [ -f "$PLUGIN_JSON" ]; then
+    # Extract all "command" values from hooks and check for relative paths
+    bad_paths="$(grep '"command"' "$PLUGIN_JSON" | grep -v 'CLAUDE_PLUGIN_ROOT' | grep -E '\./|[^/]scripts/' || true)"
+    if [ -z "$bad_paths" ]; then
+        assert_output "no relative paths in hook commands" "yes" "yes"
+    else
+        assert_output "no relative paths in hook commands" "" "$bad_paths"
+    fi
+else
+    assert_output "plugin.json exists" "yes" "no"
+fi
+
+# ============================
 # Summary
 # ============================
 printf "\n=== Results: %d passed, %d failed ===\n" "$PASS" "$FAIL"
