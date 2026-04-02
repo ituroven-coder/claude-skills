@@ -173,9 +173,10 @@ When `AUTO_REVIEW=true` in `.codex-review/config.env`, the entire review cycle r
 1. Write the plan in plan mode as usual
 2. Before calling `ExitPlanMode`, run review:
    ```bash
-   bash scripts/codex-review.sh init "task description"   # if no session
-   bash scripts/codex-review.sh plan "plan description"
+   bash scripts/codex-review.sh init "task description"   # ALWAYS init for a new plan — archives previous session
+   bash scripts/codex-review.sh plan --plan-file ~/.claude/plans/<slug>.md
    ```
+   **IMPORTANT**: Always run `init` before the first `plan` review in a conversation. Even if `codex-state.sh show` reports an existing session, it may be stale (from a previous conversation). The `init` command safely archives the old session and creates a fresh one. Only skip `init` when re-submitting after `CHANGES_REQUESTED` within the same review cycle.
 3. **Formal verdict check** — read `verdict.txt` from the state dir (`bash scripts/codex-state.sh dir`). Proceed ONLY if the file contains the exact string `APPROVED`. Do NOT interpret review text — only the literal file content matters.
 4. `CHANGES_REQUESTED` → fix the plan, resubmit (follow «Accept or Argue» rules). Iterate automatically up to the iteration limit.
 5. `APPROVED` → call `ExitPlanMode` (the hook auto-approves it)
