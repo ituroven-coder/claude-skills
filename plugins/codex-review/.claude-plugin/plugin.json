@@ -1,6 +1,6 @@
 {
   "name": "codex-review",
-  "description": "Cross-agent review workflow: Claude implements, Codex (GPT-5.2) reviews",
+  "description": "Cross-agent review workflow: Claude implements, Codex reviews",
   "version": "1.0.0",
   "author": {
     "name": "Polyakov"
