@@ -312,6 +312,9 @@ cmd_init() {
     # Archive previous session artifacts
     archive_previous_session
 
+    # Clear verdict to prevent stale auto-approve (AUTO_REVIEW hook)
+    rm -f "$STATE_DIR/verdict.txt"
+
     # Warn if config.env already has a session
     if [[ -n "${CODEX_SESSION_ID:-}" ]]; then
         echo "WARNING: CODEX_SESSION_ID is already set in config.env: $CODEX_SESSION_ID" >&2

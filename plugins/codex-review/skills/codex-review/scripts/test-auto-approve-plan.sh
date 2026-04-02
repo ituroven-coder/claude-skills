@@ -86,7 +86,7 @@ esac
 # ============================
 # Test 5: AUTO_REVIEW=true, verdict=APPROVED — allow
 # ============================
-printf "Test 5: AUTO_REVIEW=true, verdict=APPROVED\n"
+printf "Test 5: AUTO_REVIEW=true, verdict=APPROVED — allow\n"
 printf 'APPROVED' > ".codex-review/$BRANCH_SLUG/verdict.txt"
 output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
 case "$output" in
