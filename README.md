@@ -35,7 +35,7 @@
 
 ```bash
 # Добавить маркетплейс
-/plugin marketplace add polyakov/polyakov-claude-skills
+/plugin marketplace add artwist-polyakov/polyakov-claude-skills
 
 # Установить нужные плагины
 /plugin install docx-contracts
