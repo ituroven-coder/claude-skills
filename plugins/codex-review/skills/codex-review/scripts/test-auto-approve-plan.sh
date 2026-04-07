@@ -39,6 +39,33 @@ assert_output() {
     fi
 }
 
+# JSON validator: prefers python3 (always available on dev/CI), falls back to jq.
+# Returns 0 if input is valid JSON, 1 otherwise.
+JSON_VALIDATOR=""
+if command -v python3 >/dev/null 2>&1; then
+    JSON_VALIDATOR="python3 -c 'import sys,json; json.loads(sys.stdin.read())'"
+elif command -v jq >/dev/null 2>&1; then
+    JSON_VALIDATOR="jq -e . >/dev/null"
+fi
+
+assert_valid_json() {
+    local test_name="$1"
+    local payload="$2"
+
+    if [ -z "$JSON_VALIDATOR" ]; then
+        printf "  SKIP: %s (no python3/jq available)\n" "$test_name"
+        return 0
+    fi
+    if printf '%s' "$payload" | sh -c "$JSON_VALIDATOR" >/dev/null 2>&1; then
+        PASS=$((PASS + 1))
+        printf "  PASS: %s\n" "$test_name"
+    else
+        FAIL=$((FAIL + 1))
+        printf "  FAIL: %s (invalid JSON)\n" "$test_name"
+        printf "    payload: %s\n" "$payload"
+    fi
+}
+
 # ============================
 # Test 1: AUTO_REVIEW not set (no config.env) — silent passthrough
 # ============================
@@ -56,31 +83,52 @@ output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
 assert_output "empty output (passthrough)" "" "$output"
 
 # ============================
-# Test 3: AUTO_REVIEW=true, no verdict.txt — deny
+# Test 3: AUTO_REVIEW=true, no verdict.txt — deny (cold start)
 # ============================
-printf "Test 3: AUTO_REVIEW=true, no verdict\n"
+printf "Test 3: AUTO_REVIEW=true, no verdict (cold start)\n"
 printf 'AUTO_REVIEW=true\n' > .codex-review/config.env
 mkdir -p ".codex-review/$BRANCH_SLUG"
 rm -f ".codex-review/$BRANCH_SLUG/verdict.txt"
 output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+assert_valid_json "cold-start payload is valid JSON" "$output"
 case "$output" in
     *'"behavior":"deny"'*) assert_output "deny decision" "yes" "yes" ;;
     *) assert_output "deny decision" "contains behavior:deny" "$output" ;;
 esac
+# Cold-start message must instruct to load skill and run plan review
 case "$output" in
-    *"codex-review"*) assert_output "message mentions skill" "yes" "yes" ;;
-    *) assert_output "message mentions skill" "contains codex-review" "$output" ;;
+    *"No Codex plan verdict found"*) assert_output "cold-start message" "yes" "yes" ;;
+    *) assert_output "cold-start message" "contains 'No Codex plan verdict found'" "$output" ;;
+esac
+case "$output" in
+    *"Load skill 'codex-review'"*) assert_output "cold-start mentions skill" "yes" "yes" ;;
+    *) assert_output "cold-start mentions skill" "contains skill load" "$output" ;;
 esac
 
 # ============================
-# Test 4: AUTO_REVIEW=true, verdict=CHANGES_REQUESTED — deny
+# Test 4: AUTO_REVIEW=true, verdict=CHANGES_REQUESTED — deny (resubmit)
 # ============================
-printf "Test 4: AUTO_REVIEW=true, verdict=CHANGES_REQUESTED\n"
+printf "Test 4: AUTO_REVIEW=true, verdict=CHANGES_REQUESTED (resubmit)\n"
 printf 'CHANGES_REQUESTED' > ".codex-review/$BRANCH_SLUG/verdict.txt"
 output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+assert_valid_json "resubmit payload is valid JSON" "$output"
 case "$output" in
     *'"behavior":"deny"'*) assert_output "deny decision" "yes" "yes" ;;
     *) assert_output "deny decision" "contains behavior:deny" "$output" ;;
+esac
+# Resubmit message must contain the verdict value and resubmit instruction
+case "$output" in
+    *"verdict is CHANGES_REQUESTED"*) assert_output "verdict value in message" "yes" "yes" ;;
+    *) assert_output "verdict value in message" "contains 'verdict is CHANGES_REQUESTED'" "$output" ;;
+esac
+case "$output" in
+    *"resubmit"*) assert_output "resubmit instruction" "yes" "yes" ;;
+    *) assert_output "resubmit instruction" "contains 'resubmit'" "$output" ;;
+esac
+# Cold-start message must NOT appear in this branch
+case "$output" in
+    *"No Codex plan verdict found"*) assert_output "no cold-start mix-up" "absent" "present" ;;
+    *) assert_output "no cold-start mix-up" "yes" "yes" ;;
 esac
 
 # ============================
@@ -89,6 +137,7 @@ esac
 printf "Test 5: AUTO_REVIEW=true, verdict=APPROVED — allow + cleanup\n"
 printf 'APPROVED' > ".codex-review/$BRANCH_SLUG/verdict.txt"
 output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+assert_valid_json "allow payload is valid JSON" "$output"
 case "$output" in
     *'"behavior":"allow"'*) assert_output "allow decision" "yes" "yes" ;;
     *) assert_output "allow decision" "contains behavior:allow" "$output" ;;
@@ -168,9 +217,38 @@ case "$output2" in
 esac
 
 # ============================
-# Test 10: plugin.json hook commands use ${CLAUDE_PLUGIN_ROOT}, not relative paths
+# Test 10: parser regression — `export AUTO_REVIEW=true` form
 # ============================
-printf "Test 10: plugin.json hook paths use CLAUDE_PLUGIN_ROOT\n"
+# Regression: the previous grep|sed parser silently missed this form,
+# while common.sh (which uses `.`) honored it. Hook now sources too.
+printf "Test 10: parser regression — 'export AUTO_REVIEW=true'\n"
+printf 'export AUTO_REVIEW=true\n' > .codex-review/config.env
+printf 'APPROVED' > ".codex-review/$BRANCH_SLUG/verdict.txt"
+output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+case "$output" in
+    *'"behavior":"allow"'*) assert_output "'export' form honored" "yes" "yes" ;;
+    *) assert_output "'export' form honored" "contains behavior:allow" "$output" ;;
+esac
+
+# ============================
+# Test 11: parser regression — leading whitespace
+# ============================
+printf "Test 11: parser regression — leading whitespace\n"
+printf '  AUTO_REVIEW=true\n' > .codex-review/config.env
+printf 'APPROVED' > ".codex-review/$BRANCH_SLUG/verdict.txt"
+output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+case "$output" in
+    *'"behavior":"allow"'*) assert_output "leading whitespace honored" "yes" "yes" ;;
+    *) assert_output "leading whitespace honored" "contains behavior:allow" "$output" ;;
+esac
+
+# Restore plain config for any subsequent tests
+printf 'AUTO_REVIEW=true\n' > .codex-review/config.env
+
+# ============================
+# Test 12: plugin.json hook commands use ${CLAUDE_PLUGIN_ROOT}, not relative paths
+# ============================
+printf "Test 12: plugin.json hook paths use CLAUDE_PLUGIN_ROOT\n"
 PLUGIN_JSON="$SCRIPT_DIR/../../../.claude-plugin/plugin.json"
 if [ -f "$PLUGIN_JSON" ]; then
     # Extract all "command" values from hooks and check for relative paths
