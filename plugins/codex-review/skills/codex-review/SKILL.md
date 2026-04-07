@@ -42,17 +42,29 @@ bash scripts/codex-review.sh init "Implement JWT authentication for API"
 
 ### 2. Ревью плана
 
-Опиши ЧТО собираешься делать, КАКОЙ подход выбрал и ПОЧЕМУ. Включи **полное содержимое плана** в аргумент — Codex НЕ имеет доступа к файлам вне папки проекта.
+Передай путь к файлу плана через `--plan-file`. НЕ вставляй содержимое плана в аргумент командной строки — скрипт сам читает файл и передаёт содержимое inline в Codex.
+
+#### С plan mode
 
 Если используешь plan mode — отправь план на ревью **перед** `ExitPlanMode`:
-1. Написал план в файл
-2. Отправь содержимое плана целиком через `codex-review.sh plan`
-3. `CHANGES_REQUESTED` → скорректируй план, отправь снова (см. «Accept or Argue»)
+1. Написал план → CC сохраняет его в `~/.claude/plans/<slug>.md` (автоматически)
+2. Передай этот путь в `--plan-file`:
+   ```bash
+   bash scripts/codex-review.sh plan --plan-file ~/.claude/plans/<slug>.md
+   ```
+3. `CHANGES_REQUESTED` → скорректируй план в файле, отправь снова (см. «Accept or Argue»)
 4. `APPROVED` → вызови `ExitPlanMode` для одобрения пользователем
 
 Таким образом план проходит два ревью: техническое (Codex) и бизнес-приоритетное (пользователь).
 
-#### Шаблон описания плана
+#### Без plan mode
+
+Если план написан в отдельный файл внутри проекта:
+```bash
+bash scripts/codex-review.sh plan --plan-file docs/plan.md
+```
+
+#### Шаблон плана (рекомендуемая структура файла)
 
 ```
 What: [problem being solved]
@@ -60,10 +72,6 @@ Approach: [chosen approach and why]
 Alternatives considered: [what was rejected and why]
 Files to change: [list]
 Addressed concerns: [if resubmit — point-by-point from previous review]
-```
-
-```bash
-bash scripts/codex-review.sh plan "What: JWT authentication for API. Approach: middleware validates token, refresh via separate endpoint. Alternatives: session-based rejected (API is stateless). Files: auth/jwt.py, api/auth.py, tests/test_auth.py"
 ```
 
 ### 3. Реализация

@@ -1,6 +1,9 @@
 #!/bin/bash
 # Main codex-review script: init, plan, code
-# Usage: codex-review.sh <init|plan|code> "description" [--max-iter N]
+# Usage: codex-review.sh <init|plan|code> <args> [--max-iter N]
+#   init "task description"
+#   plan --plan-file <path>   (reads file content, passes inline to Codex)
+#   code "description"
 #
 # Exit codes:
 #   0 — review received (APPROVED or CHANGES_REQUESTED)
@@ -20,16 +23,21 @@ guard_recursion
 # --- Parse arguments ---
 COMMAND="${1:-}"
 if [[ -z "$COMMAND" ]]; then
-    echo "Usage: codex-review.sh <init|plan|code> \"description\" [--max-iter N]" >&2
+    echo "Usage: codex-review.sh <init|plan|code> <args> [--max-iter N]" >&2
     exit 1
 fi
 shift
 
 DESCRIPTION=""
+PLAN_FILE=""
 MAX_ITER=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --plan-file)
+            PLAN_FILE="$2"
+            shift 2
+            ;;
         --max-iter)
             MAX_ITER="$2"
             shift 2
@@ -41,9 +49,26 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ -z "$DESCRIPTION" && "$COMMAND" != "status" ]]; then
+# --- Validate arguments per command ---
+if [[ "$COMMAND" == "plan" ]]; then
+    if [[ -z "$PLAN_FILE" ]]; then
+        echo "ERROR: --plan-file is required for plan review." >&2
+        echo "Usage: codex-review.sh plan --plan-file <path> [--max-iter N]" >&2
+        exit 1
+    fi
+    if [[ ! -f "$PLAN_FILE" ]]; then
+        echo "ERROR: Plan file not found: $PLAN_FILE" >&2
+        exit 1
+    fi
+    # Read plan file content as description
+    DESCRIPTION="$(cat "$PLAN_FILE")"
+    if [[ -z "$DESCRIPTION" ]]; then
+        echo "ERROR: Plan file is empty: $PLAN_FILE" >&2
+        exit 1
+    fi
+elif [[ -z "$DESCRIPTION" && "$COMMAND" != "status" ]]; then
     echo "ERROR: Description is required." >&2
-    echo "Usage: codex-review.sh <init|plan|code> \"description\" [--max-iter N]" >&2
+    echo "Usage: codex-review.sh <init|code> \"description\" [--max-iter N]" >&2
     exit 1
 fi
 
@@ -424,6 +449,12 @@ cmd_review() {
         exit 2
     fi
 
+    # Save plan file copy for history
+    if [[ "$phase" == "plan" && -n "$PLAN_FILE" ]]; then
+        cp "$PLAN_FILE" "$STATE_DIR/plan.md"
+        echo "Plan saved to: $STATE_DIR/plan.md" >&2
+    fi
+
     local codex_prompt
     codex_prompt="$(build_review_prompt "$phase" "$DESCRIPTION")"
 
@@ -491,12 +522,12 @@ case "$COMMAND" in
     plan)   cmd_review "plan" ;;
     code)   cmd_review "code" ;;
     *)
-        echo "Usage: codex-review.sh <init|plan|code> \"description\" [--max-iter N]" >&2
+        echo "Usage: codex-review.sh <init|plan|code> <args> [--max-iter N]" >&2
         echo "" >&2
         echo "Commands:" >&2
-        echo "  init \"task\"          Create a new Codex session for the given task" >&2
-        echo "  plan \"description\"   Submit plan for review" >&2
-        echo "  code \"description\"   Submit code for review" >&2
+        echo "  init \"task\"                    Create a new Codex session for the given task" >&2
+        echo "  plan --plan-file <path>        Submit plan for review (reads file, passes inline)" >&2
+        echo "  code \"description\"             Submit code for review" >&2
         echo "" >&2
         echo "Exit codes:" >&2
         echo "  0 — Review received (APPROVED or CHANGES_REQUESTED)" >&2
