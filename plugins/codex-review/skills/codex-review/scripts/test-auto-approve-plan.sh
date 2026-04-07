@@ -66,6 +66,19 @@ assert_valid_json() {
     fi
 }
 
+# Extract decision.message from a hook payload. Uses python3 (already required
+# by assert_valid_json). Prints empty string on failure so callers can skip.
+extract_message() {
+    if ! command -v python3 >/dev/null 2>&1; then
+        return 0
+    fi
+    printf '%s' "$1" | python3 -c 'import sys, json
+try:
+    print(json.loads(sys.stdin.read())["hookSpecificOutput"]["decision"]["message"])
+except Exception:
+    pass' 2>/dev/null
+}
+
 # ============================
 # Test 1: AUTO_REVIEW not set (no config.env) — silent passthrough
 # ============================
@@ -246,10 +259,73 @@ esac
 printf 'AUTO_REVIEW=true\n' > .codex-review/config.env
 
 # ============================
-# Test 12: plugin.json hook commands use ${CLAUDE_PLUGIN_ROOT}, not relative paths
+# Test 12: sanitization — verdict with JSON-breaking quotes
 # ============================
-printf "Test 12: plugin.json hook paths use CLAUDE_PLUGIN_ROOT\n"
-PLUGIN_JSON="$SCRIPT_DIR/../../../.claude-plugin/plugin.json"
+# Raw `"` inside verdict.txt would break the JSON string literal in the deny
+# payload if not stripped. `tr -cd '[:alnum:]_'` must remove it.
+printf "Test 12: sanitization — verdict with double quotes\n"
+printf 'CHANGES"REQUESTED' > ".codex-review/$BRANCH_SLUG/verdict.txt"
+output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+assert_valid_json "payload with quoted verdict is valid JSON" "$output"
+msg="$(extract_message "$output")"
+case "$msg" in
+    *'"'*) assert_output "quotes stripped from message" "no quotes" "FOUND: $msg" ;;
+    *CHANGESREQUESTED*) assert_output "sanitized verdict in message" "yes" "yes" ;;
+    *) assert_output "sanitized verdict in message" "contains CHANGESREQUESTED" "$msg" ;;
+esac
+
+# ============================
+# Test 13: sanitization — verdict with backslash
+# ============================
+# Raw `\` would escape the following char in a JSON string literal. Must be
+# stripped before interpolation.
+printf "Test 13: sanitization — verdict with backslash\n"
+printf 'CHANGES\\REQUESTED' > ".codex-review/$BRANCH_SLUG/verdict.txt"
+output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+assert_valid_json "payload with backslash verdict is valid JSON" "$output"
+msg="$(extract_message "$output")"
+case "$msg" in
+    *'\\'*) assert_output "backslash stripped from message" "no backslash" "FOUND: $msg" ;;
+    *CHANGESREQUESTED*) assert_output "sanitized verdict in message" "yes" "yes" ;;
+    *) assert_output "sanitized verdict in message" "contains CHANGESREQUESTED" "$msg" ;;
+esac
+
+# ============================
+# Test 14: sanitization fallback — all-garbage verdict → "unknown"
+# ============================
+# verdict.txt with only non-alnum chars → sanitized to empty → fallback.
+printf "Test 14: fallback — all-garbage verdict\n"
+printf '!!!@@@###' > ".codex-review/$BRANCH_SLUG/verdict.txt"
+output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+assert_valid_json "payload with garbage verdict is valid JSON" "$output"
+msg="$(extract_message "$output")"
+case "$msg" in
+    *"verdict is unknown"*) assert_output "unknown fallback in message" "yes" "yes" ;;
+    *) assert_output "unknown fallback in message" "contains 'verdict is unknown'" "$msg" ;;
+esac
+
+# ============================
+# Test 15: sanitization fallback — empty verdict file → "unknown"
+# ============================
+printf "Test 15: fallback — empty verdict file\n"
+: > ".codex-review/$BRANCH_SLUG/verdict.txt"
+output="$(echo '{}' | sh "$HOOK" 2>/dev/null)" || true
+assert_valid_json "payload with empty verdict is valid JSON" "$output"
+msg="$(extract_message "$output")"
+case "$msg" in
+    *"verdict is unknown"*) assert_output "unknown fallback in message" "yes" "yes" ;;
+    *) assert_output "unknown fallback in message" "contains 'verdict is unknown'" "$msg" ;;
+esac
+
+# ============================
+# Test 16: plugin.json hook commands use ${CLAUDE_PLUGIN_ROOT}, not relative paths
+# ============================
+printf "Test 16: plugin.json hook paths use CLAUDE_PLUGIN_ROOT\n"
+# Resolve the plugin.json of the source tree this test belongs to.
+# Layout: <plugin_root>/skills/codex-review/scripts/test-auto-approve-plan.sh
+SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"          # .../skills/codex-review
+PLUGIN_ROOT="$(cd "$SKILL_ROOT/../.." && pwd)"      # .../plugins/codex-review
+PLUGIN_JSON="$PLUGIN_ROOT/.claude-plugin/plugin.json"
 if [ -f "$PLUGIN_JSON" ]; then
     # Extract all "command" values from hooks and check for relative paths
     bad_paths="$(grep '"command"' "$PLUGIN_JSON" | grep -v 'CLAUDE_PLUGIN_ROOT' | grep -E '\./|[^/]scripts/' || true)"
