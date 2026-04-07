@@ -2,9 +2,11 @@
 name: yandex-webmaster
 description: |
   Управление сайтами через Yandex Webmaster API: индексация, поисковые запросы,
-  сайтмапы, переобход, ссылки, фиды, диагностика.
+  сайтмапы, переобход, ссылки, фиды, диагностика. Плюс scraping раздела
+  Alice / Share of Voice (нет публичного API).
   Triggers: яндекс вебмастер, yandex webmaster, webmaster api,
-  вебмастер индексация, вебмастер запросы, вебмастер переобход.
+  вебмастер индексация, вебмастер запросы, вебмастер переобход,
+  share of voice, sov, алиса, alice efficiency, конкуренты в алисе.
 ---
 
 # yandex-webmaster
@@ -16,6 +18,10 @@ description: |
 Требуется `YANDEX_WEBMASTER_TOKEN` в `config/.env`.
 Scope: `webmaster:hostinfo` + `webmaster:verify`.
 Инструкция: `config/README.md`.
+
+Для `alice.sh` (Share of Voice, без публичного API) дополнительно нужен
+`SESSION_ID` — cookie из браузера. Подробности в `config/README.md` и
+[references/ALICE_EFFICIENCY.md](references/ALICE_EFFICIENCY.md).
 
 ## Philosophy
 
@@ -116,6 +122,15 @@ bash scripts/<script>.sh --host <domain> [--action <action>] [params...]
 |--------|-------------|------------|
 | `sitemaps.sh` | Управление сайтмапами | `--action list\|user-list\|info\|add\|recrawl-limit\|recrawl` |
 
+### Alice / Share of Voice (SSR scraping)
+
+| Script | Description | Key params |
+|--------|-------------|------------|
+| `alice.sh` | Эффективность в Алисе: SoV timeline, конкуренты, запросы где сайт есть/нет | `--action summary\|sov\|competitors\|with-site\|without-site\|fetch`, `--no-cache` |
+
+> ⚠ Нет публичного API — данные парсятся из `window._initData` HTML-страницы.
+> Требует `SESSION_ID` cookie в `config/.env`. См. [references/ALICE_EFFICIENCY.md](references/ALICE_EFFICIENCY.md).
+
 ### Фиды и PRO
 
 | Script | Description | Key params |
@@ -146,6 +161,7 @@ bash scripts/<script>.sh --host <domain> [--action <action>] [params...]
 - `host_*/indexing/*.tsv` — данные индексации (session)
 - `host_*/insearch/*.tsv` — данные о поиске (session)
 - `host_*/links/*.tsv` — данные о ссылках (session)
+- `host_*/alice/init.json` — распарсенный alice объект, переиспользуется всеми action'ами `alice.sh` (refresh: `--no-cache` или `--action fetch`)
 - Диагностика, квоты, статусы переобхода — **не кешируются** (always live)
 
 ## Расширенные сценарии
@@ -160,6 +176,7 @@ bash scripts/<script>.sh --host <domain> [--action <action>] [params...]
 - [Внешние ссылки](references/EXTERNAL_LINKS.md)
 - [YML-фиды](references/FEEDS.md)
 - [PRO SERP экспорт](references/SEARCH_EXPORT.md)
+- [Alice / Share of Voice (scraping)](references/ALICE_EFFICIENCY.md)
 - [Расписание врачей (спецификация)](references/DOCTORS_SCHEDULE.md)
 
 ## Лимиты API

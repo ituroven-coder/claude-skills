@@ -50,6 +50,24 @@ bash scripts/hosts.sh
 
 Токен действует **1 год**. После истечения получите новый по той же ссылке.
 
+## SESSION_ID — для Alice (Share of Voice)
+
+Данные раздела «Эффективность → Алиса» **не доступны через Webmaster API v4** —
+они отдаются только при SSR-рендере страницы. Чтобы их парсить (`scripts/alice.sh`),
+нужна cookie `Session_id` авторизованного пользователя.
+
+Где взять:
+1. Откройте https://webmaster.yandex.ru в обычном залогиненном Chrome.
+2. DevTools (F12) → **Application** → **Cookies** → `https://yandex.ru`
+3. Найдите строку `Session_id` (httpOnly) и скопируйте Value целиком.
+4. Вставьте в `config/.env` **в кавычках** (значение содержит `|`):
+   ```
+   SESSION_ID="3:1775...|142834...|3:11824..."
+   ```
+
+Cookie живёт долго (несколько месяцев), но при логауте/смене пароля
+протухает — тогда нужно достать заново.
+
 ## Документация
 
 - Webmaster API: https://yandex.ru/dev/webmaster/doc/ru/
