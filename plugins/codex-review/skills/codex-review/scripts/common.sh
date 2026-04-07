@@ -40,7 +40,9 @@ get_main_repo_root() {
 # --- Current branch name, sanitized for use as directory name ---
 get_branch_slug() {
     local branch
-    branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" || branch="detached"
+    branch="$(git symbolic-ref --short HEAD 2>/dev/null)" \
+        || branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" \
+        || branch="detached"
     # Replace slashes with dashes: feat/auth/jwt → feat-auth-jwt
     echo "$branch" | tr '/' '-'
 }
@@ -82,6 +84,7 @@ load_config() {
     CODEX_REASONING_EFFORT="${CODEX_REASONING_EFFORT:-}"
     CODEX_MAX_ITERATIONS="${CODEX_MAX_ITERATIONS:-5}"
     CODEX_YOLO="${CODEX_YOLO:-true}"
+    AUTO_REVIEW="${AUTO_REVIEW:-false}"
     CODEX_REVIEWER_PROMPT="${CODEX_REVIEWER_PROMPT:-}"
     CODEX_PLAN_GUIDE="${CODEX_PLAN_GUIDE:-}"
     CODEX_CODE_GUIDE="${CODEX_CODE_GUIDE:-}"

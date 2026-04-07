@@ -100,6 +100,10 @@ CODEX_REASONING_EFFORT=high
 CODEX_MAX_ITERATIONS=5
 CODEX_YOLO=true
 
+# Auto-review mode: block ExitPlanMode until Codex approves the plan,
+# auto-run code review after implementation.
+# AUTO_REVIEW=true
+
 # Custom init procedure (optional, controls what Codex does during init)
 # Reviewer role is always set automatically — this only adds init instructions.
 # Example: make Codex explore the codebase before reviews begin:
@@ -200,6 +204,15 @@ The plugin works transparently from git worktrees:
 - Multiple worktrees on different branches can run reviews in parallel without conflicts
 - `config.env` is shared across all branches (project-level settings)
 - No additional setup required
+
+## Auto-Review Mode
+
+When `AUTO_REVIEW=true` in `.codex-review/config.env`, the plugin enforces automated review:
+
+- **Plan phase**: a plugin hook blocks `ExitPlanMode` until `verdict.txt` contains `APPROVED`. If the verdict is missing or not approved, the hook denies the exit and instructs Claude to load the codex-review skill and run plan review first.
+- **Code phase**: after implementation, Claude automatically sends code for review and iterates until approved.
+
+No additional configuration needed — the hook is declared in `plugin.json` and auto-registered when the plugin is enabled.
 
 ## Анти-рекурсия
 

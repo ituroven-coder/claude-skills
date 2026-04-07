@@ -270,6 +270,7 @@ build_review_prompt() {
     local phase_instructions
     if [[ "$phase" == "plan" ]]; then
         phase_instructions="You are reviewing a proposed implementation plan.
+The full plan text is provided above in 'Description from Claude'. Do NOT read plan files from disk — use the text above as the single source of truth.
 
 Focus areas:
 - Correctness: does the approach solve the stated problem?
@@ -335,6 +336,9 @@ cmd_init() {
 
     # Archive previous session artifacts
     archive_previous_session
+
+    # Clear verdict to prevent stale auto-approve (AUTO_REVIEW hook)
+    rm -f "$STATE_DIR/verdict.txt"
 
     # Warn if config.env already has a session
     if [[ -n "${CODEX_SESSION_ID:-}" ]]; then
