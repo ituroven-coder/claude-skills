@@ -6,7 +6,8 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOOK="$SCRIPT_DIR/auto-approve-plan.sh"
+PROD_SCRIPTS="$SCRIPT_DIR/../skills/codex-review/scripts"
+HOOK="$PROD_SCRIPTS/auto-approve-plan.sh"
 
 # --- Setup temp repo ---
 TMPDIR_BASE="${TMPDIR:-/tmp}"
@@ -322,9 +323,8 @@ esac
 # ============================
 printf "Test 16: plugin.json hook paths use CLAUDE_PLUGIN_ROOT\n"
 # Resolve the plugin.json of the source tree this test belongs to.
-# Layout: <plugin_root>/skills/codex-review/scripts/test-auto-approve-plan.sh
-SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"          # .../skills/codex-review
-PLUGIN_ROOT="$(cd "$SKILL_ROOT/../.." && pwd)"      # .../plugins/codex-review
+# Layout: <plugin_root>/test/test-auto-approve-plan.sh
+PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"         # .../plugins/codex-review
 PLUGIN_JSON="$PLUGIN_ROOT/.claude-plugin/plugin.json"
 if [ -f "$PLUGIN_JSON" ]; then
     # Extract all "command" values from hooks and check for relative paths

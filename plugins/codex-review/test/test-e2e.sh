@@ -9,7 +9,7 @@
 #   - Network access
 #
 # Run:
-#   CODEX_E2E=1 sh plugins/codex-review/skills/codex-review/scripts/test-e2e.sh
+#   CODEX_E2E=1 sh plugins/codex-review/test/test-e2e.sh
 #
 # Scenarios (grouped into 2 repos to minimize codex calls):
 #
@@ -30,9 +30,10 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOOK="$SCRIPT_DIR/auto-approve-plan.sh"
-REVIEW_CMD="$SCRIPT_DIR/codex-review.sh"
-STATE_CMD="$SCRIPT_DIR/codex-state.sh"
+PROD_SCRIPTS="$SCRIPT_DIR/../skills/codex-review/scripts"
+HOOK="$PROD_SCRIPTS/auto-approve-plan.sh"
+REVIEW_CMD="$PROD_SCRIPTS/codex-review.sh"
+STATE_CMD="$PROD_SCRIPTS/codex-state.sh"
 FIXTURES="$SCRIPT_DIR/test-fixtures"
 
 # --- Opt-in gate ---

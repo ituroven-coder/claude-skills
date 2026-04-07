@@ -15,8 +15,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOOK="$SCRIPT_DIR/auto-approve-plan.sh"
-STATE_CMD="$SCRIPT_DIR/codex-state.sh"
+PROD_SCRIPTS="$SCRIPT_DIR/../skills/codex-review/scripts"
+HOOK="$PROD_SCRIPTS/auto-approve-plan.sh"
+STATE_CMD="$PROD_SCRIPTS/codex-state.sh"
 
 PASS=0
 FAIL=0
