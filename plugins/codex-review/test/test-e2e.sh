@@ -26,7 +26,7 @@
 #   reject   — Repo B: reject then resubmit (3 codex calls: init + 2 plans)
 #     B1 init + reject plan → CHANGES_REQUESTED (via explicit fixture request)
 #     B2 hook deny   — message must contain CHANGES_REQUESTED + "resubmit"
-#     B3 resubmit plan — approve fixture in SAME session → APPROVED
+#     B3 resubmit plan — resubmit fixture in SAME session → APPROVED
 #     B4 hook allow  — stale reject was cleared before step B3
 #
 #   stale    — Repo S: stale-state survival test (1 real claude run + ~2 codex calls)
@@ -61,7 +61,7 @@ if ! command -v codex >/dev/null 2>&1; then
     exit 1
 fi
 
-if [ ! -f "$FIXTURES/approve_plan.md" ] || [ ! -f "$FIXTURES/reject_plan.md" ]; then
+if [ ! -f "$FIXTURES/approve_plan.md" ] || [ ! -f "$FIXTURES/reject_plan.md" ] || [ ! -f "$FIXTURES/resubmit_plan.md" ]; then
     echo "ERROR: fixtures missing in $FIXTURES" >&2
     exit 1
 fi
@@ -165,10 +165,9 @@ scenario_approve() {
         bash "$REVIEW_CMD" init "e2e approve test" >/dev/null 2>&1
     ) || { echo "  FAIL: codex-review.sh init errored" >&2; FAIL=$((FAIL + 1)); rm -rf "$RA"; return; }
 
-    approve_plan="$(cat "$FIXTURES/approve_plan.md")"
     (
         cd "$RA"
-        bash "$REVIEW_CMD" plan "$approve_plan" >/dev/null 2>&1
+        bash "$REVIEW_CMD" plan --plan-file "$FIXTURES/approve_plan.md" >/dev/null 2>&1
     ) || { echo "  FAIL: codex-review.sh plan errored" >&2; FAIL=$((FAIL + 1)); rm -rf "$RA"; return; }
 
     status_a2="$(cd "$RA" && bash "$STATE_CMD" get last_review_status 2>/dev/null | tr -d '[:space:]')"
@@ -219,10 +218,9 @@ scenario_reject() {
         bash "$REVIEW_CMD" init "e2e reject test" >/dev/null 2>&1
     ) || { echo "  FAIL: codex-review.sh init errored" >&2; FAIL=$((FAIL + 1)); rm -rf "$RB"; return; }
 
-    reject_plan="$(cat "$FIXTURES/reject_plan.md")"
     (
         cd "$RB"
-        bash "$REVIEW_CMD" plan "$reject_plan" >/dev/null 2>&1
+        bash "$REVIEW_CMD" plan --plan-file "$FIXTURES/reject_plan.md" >/dev/null 2>&1
     ) || true  # CHANGES_REQUESTED still exits 0; only technical errors exit non-zero
 
     status_b1="$(cd "$RB" && bash "$STATE_CMD" get last_review_status 2>/dev/null | tr -d '[:space:]')"
@@ -244,12 +242,15 @@ scenario_reject() {
     assert_contains "verdict value in deny msg" "$out_b2" "CHANGES_REQUESTED"
     assert_contains "resubmit instruction" "$out_b2" "resubmit"
 
-    # --- B3: resubmit with approve fixture in SAME session ---
-    printf "B3: resubmit plan (approve fixture, same session)\n"
-    approve_plan="$(cat "$FIXTURES/approve_plan.md")"
+    # --- B3: resubmit with resubmit fixture in SAME session ---
+    # NOTE: we use resubmit_plan.md (not approve_plan.md) because the prior
+    # reject_plan.md explicitly instructed Codex to respond CHANGES_REQUESTED;
+    # that instruction "sticks" in the session and Codex keeps rejecting unless
+    # the new plan explicitly acknowledges the transition and asks for APPROVED.
+    printf "B3: resubmit plan (resubmit fixture, same session)\n"
     (
         cd "$RB"
-        bash "$REVIEW_CMD" plan "$approve_plan" >/dev/null 2>&1
+        bash "$REVIEW_CMD" plan --plan-file "$FIXTURES/resubmit_plan.md" >/dev/null 2>&1
     ) || { echo "  FAIL: resubmit plan errored" >&2; FAIL=$((FAIL + 1)); rm -rf "$RB"; return; }
 
     status_b3="$(cd "$RB" && bash "$STATE_CMD" get last_review_status 2>/dev/null | tr -d '[:space:]')"
@@ -340,6 +341,10 @@ NOTE
     claude_log="$RS/claude.log"
     # The prompt explicitly invokes the codex-review skill trigger so the
     # workflow runs. Without this trigger, the skill would not auto-load.
+    # We also tell claude NOT to touch .codex-review/ manually — the skill's
+    # init command is responsible for archiving prior state (via
+    # archive_previous_session in common.sh), and a manual `mv` would bypass
+    # exactly what we want to test.
     # Tools: Bash (for codex-review.sh), Edit/Read/Write for the file edit.
     # acceptEdits permission so claude doesn't get blocked editing README.
     # 5 min hard timeout — codex init + first plan review on a small repo
@@ -350,7 +355,7 @@ NOTE
             --plugin-dir "$PLUGIN_ROOT" \
             --allowedTools "Bash,Edit,Read,Write" \
             --permission-mode acceptEdits \
-            "Use codex-review workflow to plan and apply this change: add a single line containing 'Hello, world!' to README.md after the existing heading. Treat this as a fresh task — any pre-existing .codex-review state belongs to unrelated prior work and must be archived before starting." \
+            "Use codex-review workflow to plan and apply this change: add a single line containing 'Hello, world!' to README.md after the existing heading. IMPORTANT: any pre-existing state in .codex-review/ belongs to unrelated prior work. Do NOT manually move, rename or delete .codex-review/ — instead, just run 'codex-review.sh init' with a description of the new task; the init command itself archives any prior session into .codex-review/archive/<timestamp>/ automatically. Then run codex-review.sh plan as usual." \
             > "$claude_log" 2>&1
     ) || true
 
