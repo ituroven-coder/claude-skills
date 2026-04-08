@@ -178,6 +178,20 @@ remove_status() {
     rm -f "$state_dir/STATUS.md"
 }
 
+# --- Parse verdict file ---
+# Reads single-word verdict file and prints normalized verdict string.
+# Output: "APPROVED", "CHANGES_REQUESTED", or empty for missing/unknown.
+parse_verdict_file() {
+    local file="$1"
+    [[ -f "$file" ]] || return 0
+    local raw
+    raw="$(tr -d '[:space:]' < "$file")"
+    case "$raw" in
+        APPROVED|CHANGES_REQUESTED) echo "$raw" ;;
+        *) : ;;
+    esac
+}
+
 # --- Archive previous session artifacts ---
 archive_previous_session() {
     local state_dir
@@ -235,10 +249,8 @@ generate_archive_summary() {
             | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//')"
     fi
 
-    # Read final verdict
-    if [[ -f "$state_dir/verdict.txt" ]]; then
-        final_verdict="$(tr -d '[:space:]' < "$state_dir/verdict.txt")"
-    fi
+    # Read final verdict via format-agnostic helper
+    final_verdict="$(parse_verdict_file "$state_dir/verdict.txt")"
     if [[ -z "$final_verdict" ]]; then
         final_verdict="$last_status"
     fi

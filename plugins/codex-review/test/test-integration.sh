@@ -54,9 +54,23 @@ assert_allow() {
     esac
 }
 
+# Stable fake session_id for integration tests. Must match the hook's stdin
+# regex: hex chars + dashes only (mirrors real Claude UUID format).
+SID_INT="abcdef01-2345-6789-abcd-ef0123456789"
+
+hook_stdin() {
+    printf '{"session_id":"%s","hook_event_name":"PermissionRequest","tool_name":"ExitPlanMode"}\n' "$1"
+}
+
 run_hook_in() {
-    # Run hook from the given directory with empty stdin.
-    (cd "$1" && echo '{}' | sh "$HOOK" 2>/dev/null) || true
+    # Run hook from the given directory with a valid session_id in stdin.
+    (cd "$1" && hook_stdin "$SID_INT" | sh "$HOOK" 2>/dev/null) || true
+}
+
+# Claim the session in the given state dir so the hook can proceed past
+# the session-binding guard and actually read verdict.txt.
+claim_session_in() {
+    printf '%s\n' "$SID_INT" > "$1/current_session.txt"
 }
 
 git_init_repo() {
@@ -91,6 +105,7 @@ state_dir="$(cd "$T1" && bash "$STATE_CMD" dir)"
 assert_eq "codex-state.sh dir = <repo>/.codex-review/main" \
     "$T1/.codex-review/main" "$state_dir"
 
+claim_session_in "$state_dir"
 printf 'APPROVED' > "$state_dir/verdict.txt"
 out1="$(run_hook_in "$T1")"
 assert_allow "hook reads verdict from same dir" "$out1"
@@ -112,6 +127,7 @@ state_dir2="$(cd "$T2" && bash "$STATE_CMD" dir)"
 assert_eq "slash → dash in dir name" \
     "$T2/.codex-review/feat-my-feature" "$state_dir2"
 
+claim_session_in "$state_dir2"
 printf 'APPROVED' > "$state_dir2/verdict.txt"
 out2="$(run_hook_in "$T2")"
 assert_allow "hook reads from slash-normalized dir" "$out2"
@@ -135,6 +151,7 @@ state_dir3="$(cd "$T3" && bash "$STATE_CMD" dir)"
 assert_eq "no-commit repo uses branch name, not 'HEAD'" \
     "$T3/.codex-review/main" "$state_dir3"
 
+claim_session_in "$state_dir3"
 printf 'APPROVED' > "$state_dir3/verdict.txt"
 out3="$(run_hook_in "$T3")"
 assert_allow "hook allows in no-commit repo" "$out3"
@@ -163,6 +180,7 @@ state_dir4="$(cd "$T4-wt" && bash "$STATE_CMD" dir)"
 assert_eq "worktree state dir lives in MAIN repo" \
     "$T4/.codex-review/feat-wt" "$state_dir4"
 
+claim_session_in "$state_dir4"
 printf 'APPROVED' > "$state_dir4/verdict.txt"
 out4="$(run_hook_in "$T4-wt")"
 assert_allow "hook (run from worktree) reads main-repo verdict" "$out4"
