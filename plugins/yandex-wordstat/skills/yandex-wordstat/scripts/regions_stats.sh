@@ -4,7 +4,8 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+# common.sh is POSIX sh; bash sources it without issue.
+. "$SCRIPT_DIR/common.sh"
 
 # Defaults
 PHRASE=""

@@ -1,28 +1,16 @@
 #!/bin/sh
-# Get totalCount from Yandex Wordstat API for an OR-query.
-# Thin wrapper: reads token from config/.env, delegates to missed_demand.py.
+# Get totalCount from Yandex Wordstat for an OR-query.
+# Backend-aware: routes through common.sh wordstat_request.
 #
 # Usage:
-#   bash scripts/query_total.sh --phrase "(купить|заказать) телефон ретро" [--regions "213"]
+#   sh scripts/query_total.sh --phrase "(купить|заказать) телефон ретро" [--regions "213"]
 #
 # Output: JSON {"total_count": N, "query": "..."} or {"error": "...", "query": "..."}
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/../config/.env"
-
-# Load token (same pattern as top_requests.sh)
-if [ -f "$CONFIG_FILE" ]; then
-    # shellcheck disable=SC1090
-    . "$CONFIG_FILE"
-fi
-
-if [ -z "$YANDEX_WORDSTAT_TOKEN" ]; then
-    echo "Error: YANDEX_WORDSTAT_TOKEN not found."
-    echo "Set in config/.env or environment. See config/README.md."
-    exit 1
-fi
+. "$SCRIPT_DIR/common.sh"
 
 # Parse arguments
 PHRASE=""
@@ -47,8 +35,25 @@ if [ -z "$PHRASE" ]; then
     exit 1
 fi
 
-# Delegate to Python
+load_config
+
+# Build legacy-shape JSON params (same shape as top_requests.sh).
+PHRASE_ESCAPED=$(json_escape "$PHRASE")
+PARAMS="{\"phrase\":\"$PHRASE_ESCAPED\""
+if [ -n "$REGIONS" ]; then
+    PARAMS="$PARAMS,\"regions\":[$REGIONS]"
+fi
+PARAMS="$PARAMS}"
+
+TMPFILE="${TMPDIR:-/tmp}/ws_query_total_$$.json"
+cleanup() { rm -f "$TMPFILE"; }
+trap cleanup EXIT
+
+# Backend-aware request — common.sh writes legacy-shape JSON to stdout
+wordstat_request "topRequests" "$PARAMS" > "$TMPFILE"
+
+# Delegate totalCount extraction + JSON formatting to Python helper.
+# Python is transport-agnostic; future legacy removal touches zero Python code.
 uv run --script "$SCRIPT_DIR/missed_demand.py" query-total \
-    --token "$YANDEX_WORDSTAT_TOKEN" \
-    --phrase "$PHRASE" \
-    ${REGIONS:+--regions "$REGIONS"}
+    --json-file "$TMPFILE" \
+    --phrase "$PHRASE"
