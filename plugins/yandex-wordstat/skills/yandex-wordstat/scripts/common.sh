@@ -666,7 +666,10 @@ elif method == "regions":
 else:
     out = d
 
-print(json.dumps(out, ensure_ascii=False))
+# Compact separators — no spaces. Matches the legacy API JSON shape that
+# existing grep/sed parsers in top_requests.sh, dynamics.sh, regions_stats.sh expect.
+# E.g. "topRequests":[{"phrase":"...","count":123}] not "topRequests": [{"phrase": "...", "count": 123}]
+print(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
 PYEOF
     [ "$_nr_owns_tmp" = "1" ] && rm -f "$_nr_tmp"
     return 0
