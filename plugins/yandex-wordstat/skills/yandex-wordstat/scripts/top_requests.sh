@@ -6,21 +6,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/../config/.env"
-WS_API="https://api.wordstat.yandex.net/v1"
+. "$SCRIPT_DIR/common.sh"
 
-# --- Inline config (no external source) ---
-
-if [ -f "$CONFIG_FILE" ]; then
-    # shellcheck disable=SC1090
-    . "$CONFIG_FILE"
-fi
-
-if [ -z "$YANDEX_WORDSTAT_TOKEN" ]; then
-    echo "Error: YANDEX_WORDSTAT_TOKEN not found."
-    echo "Set in config/.env or environment. See config/README.md."
-    exit 1
-fi
+load_config
 
 # Defaults
 PHRASE=""
@@ -79,16 +67,6 @@ if [ -n "$LIMIT" ]; then
     fi
 fi
 
-# Escape string for JSON
-json_escape() {
-    printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
-}
-
-# Format number with thousands separator
-format_number() {
-    printf "%'d" "$1" 2>/dev/null || echo "$1"
-}
-
 # Escape a value for CSV (RFC 4180)
 csv_escape() {
     _csv_val=$(printf '%s' "$1" | tr -d '\n\r')
@@ -96,7 +74,7 @@ csv_escape() {
     printf '"%s"' "$_csv_val"
 }
 
-# Build JSON payload
+# Build legacy-shape JSON payload (common.sh translates to cloud format if needed)
 PHRASE_ESCAPED=$(json_escape "$PHRASE")
 PARAMS="{\"phrase\":\"$PHRASE_ESCAPED\""
 
@@ -120,14 +98,12 @@ echo "Phrase: $PHRASE"
 echo "Devices: $DEVICES"
 [ -n "$LIMIT" ] && echo "Limit: $LIMIT"
 [ -n "$CSV_FILE" ] && echo "Export: $CSV_FILE (sep='$CSV_SEP')"
+echo "Backend: $WORDSTAT_BACKEND"
 echo ""
 echo "Fetching data..."
 
-# API request — save to temp file, not variable
-curl -s -X POST "$WS_API/topRequests" \
-    -H "Authorization: Bearer $YANDEX_WORDSTAT_TOKEN" \
-    -H "Content-Type: application/json; charset=utf-8" \
-    -d "$PARAMS" | tr -d '\n\r' > "$TMPFILE"
+# Backend-aware request — common.sh writes legacy-shape JSON to stdout
+wordstat_request "topRequests" "$PARAMS" | tr -d '\n\r' > "$TMPFILE"
 
 # Check for error
 if grep -q '"error"' "$TMPFILE"; then
@@ -155,7 +131,6 @@ echo "| # | Phrase | Impressions |"
 echo "|---|--------|-------------|"
 
 # Process JSON array of {phrase, count} entries
-# Reads from TMPFILE via sed extraction, never pipes full JSON through echo
 process_entries() {
     _pe_str="$1"
     _pe_type="$2"

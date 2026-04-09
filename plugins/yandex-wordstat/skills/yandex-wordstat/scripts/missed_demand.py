@@ -9,13 +9,16 @@ Subcommands:
   parse-xlsx   Parse Yandex Direct XLSX export into groups/phrases/minus
   build-query  Build OR-query from slot structure
   merge-slots  Merge batch segmentation results into unified slots
-  query-total  Get totalCount from Wordstat API
+  query-total  Extract totalCount from a pre-fetched Wordstat response file
+
+NOTE: query-total is transport-agnostic. It does NOT make HTTP calls.
+The caller (query_total.sh) routes the request through common.sh:wordstat_request,
+which handles backend selection (legacy vs cloud) and writes the legacy-shape
+JSON response to a file. This file is what query-total reads.
 """
 import argparse
 import json
 import sys
-import urllib.request
-import urllib.error
 import re
 from collections import OrderedDict
 
@@ -574,41 +577,17 @@ def cmd_build_query(args):
 
 
 def cmd_query_total(args):
-    """Get totalCount from Wordstat API."""
-    body = {"phrase": args.phrase}
-    if args.regions:
-        try:
-            body["regions"] = [int(r.strip()) for r in args.regions.split(",")]
-        except ValueError:
-            sys.exit(f"Error: невалидные regions: {args.regions}")
+    """Extract totalCount from a pre-fetched Wordstat response file.
 
-    data = json.dumps(body).encode("utf-8")
-    url = "https://api.wordstat.yandex.net/v1/topRequests"
-
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={
-            "Authorization": f"Bearer {args.token}",
-            "Content-Type": "application/json; charset=utf-8",
-        },
-        method="POST",
-    )
-
+    Transport-agnostic: caller (query_total.sh) is responsible for the HTTP call
+    via common.sh:wordstat_request, which handles legacy vs cloud backend
+    selection. This function only parses the resulting legacy-shape JSON.
+    """
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            resp_body = resp.read().decode("utf-8")
-    except urllib.error.HTTPError as e:
-        raw = ""
-        try:
-            raw = e.read().decode("utf-8")[:500]
-        except Exception:
-            pass
-        result = {"error": f"HTTP {e.code}: {e.reason}", "query": args.phrase, "raw": raw}
-        print(json.dumps(result, ensure_ascii=False))
-        sys.exit(1)
-    except urllib.error.URLError as e:
-        result = {"error": f"URL error: {e.reason}", "query": args.phrase}
+        with open(args.json_file, "r", encoding="utf-8") as f:
+            resp_body = f.read()
+    except OSError as e:
+        result = {"error": f"Cannot read response file: {e}", "query": args.phrase}
         print(json.dumps(result, ensure_ascii=False))
         sys.exit(1)
 
@@ -637,7 +616,7 @@ def cmd_query_total(args):
         print(json.dumps(result, ensure_ascii=False))
         sys.exit(1)
 
-    # Extract totalCount with fallbacks
+    # Extract totalCount with fallbacks (top-level or nested under "result")
     total_count = obj.get("totalCount")
     if total_count is None:
         total_count = (obj.get("result") or {}).get("totalCount")
@@ -679,10 +658,16 @@ def main():
     )
 
     # query-total
-    p_query = sub.add_parser("query-total", help="Get totalCount from Wordstat API")
-    p_query.add_argument("--token", required=True, help="Yandex Wordstat API token")
-    p_query.add_argument("--phrase", required=True, help="Search phrase with operators")
-    p_query.add_argument("--regions", default=None, help="Region IDs comma-separated")
+    p_query = sub.add_parser(
+        "query-total",
+        help="Extract totalCount from a pre-fetched Wordstat response file (transport-agnostic)",
+    )
+    p_query.add_argument(
+        "--json-file",
+        required=True,
+        help="Path to JSON file containing legacy-shape Wordstat response (written by common.sh:wordstat_request)",
+    )
+    p_query.add_argument("--phrase", required=True, help="Original search phrase (for output formatting)")
 
     args = parser.parse_args()
     if args.command == "parse-xlsx":

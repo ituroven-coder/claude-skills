@@ -1,10 +1,10 @@
-#!/bin/bash
-# Check Yandex Wordstat API connection
+#!/bin/sh
+# Check Yandex Wordstat API connection (backend-aware)
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/common.sh"
 
 load_config
 
@@ -28,13 +28,6 @@ else
 fi
 
 echo ""
-echo "=== API Limits ==="
-echo "- Rate limit: 10 requests/second"
-echo "- Daily quota: 1000 requests"
+print_backend_info
 echo ""
-echo "=== Available endpoints ==="
-echo "- /v1/topRequests - top search phrases"
-echo "- /v1/dynamics   - search volume over time"
-echo "- /v1/regions    - regional distribution"
-echo ""
-echo "Token is valid and API is accessible."
+echo "Token/credentials are valid and API is accessible."
