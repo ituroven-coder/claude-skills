@@ -28,32 +28,52 @@ check_python3() {
 # --------------- Config ---------------
 
 load_config() {
+    check_python3
     if [ -f "$CONFIG_FILE" ]; then
-        # Safe .env parser: handles unquoted values with spaces
-        # Reads KEY=VALUE lines, strips optional quotes, exports via eval with quoting
-        while IFS= read -r _line || [ -n "$_line" ]; do
-            # Skip empty lines and comments
-            case "$_line" in
-                ''|\#*) continue ;;
-            esac
-            # Extract key (everything before first =)
-            _key="${_line%%=*}"
-            # Validate key: only [A-Za-z_][A-Za-z0-9_]*
-            case "$_key" in
-                *[!A-Za-z0-9_]*) continue ;;
-                [0-9]*) continue ;;
-            esac
-            # Extract value (everything after first =)
-            _val="${_line#*=}"
-            # Strip surrounding quotes if present
-            case "$_val" in
-                \"*\") _val="${_val#\"}"; _val="${_val%\"}" ;;
-                \'*\') _val="${_val#\'}"; _val="${_val%\'}" ;;
-            esac
-            # Export with safe quoting
-            eval "$_key=\"\$_val\""
-            export "$_key"
-        done < "$CONFIG_FILE"
+        _exports_file=$(mktemp "${TMPDIR:-/tmp}/xr_env.XXXXXX")
+        if ! python3 - "$CONFIG_FILE" > "$_exports_file" <<'PY'
+import pathlib
+import re
+import shlex
+import sys
+
+path = pathlib.Path(sys.argv[1])
+key_pattern = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+for lineno, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    if not raw_line.strip() or raw_line.lstrip().startswith("#") or "=" not in raw_line:
+        continue
+
+    key, value = raw_line.split("=", 1)
+    key = key.strip()
+    if not key_pattern.fullmatch(key):
+        continue
+
+    value = value.strip()
+    quoted = False
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        value = value[1:-1]
+        quoted = True
+
+    print(f"export {key}={shlex.quote(value)}")
+
+    if not quoted and any(ch.isspace() for ch in value):
+        print(
+            f"Warning: {path.name}:{lineno} {key} contains spaces without quotes. "
+            "Quote the value to keep config/.env shell-compatible.",
+            file=sys.stderr,
+        )
+PY
+        then
+            rm -f "$_exports_file"
+            echo "Error: failed to parse $CONFIG_FILE." >&2
+            exit 1
+        fi
+        # Source a sanitized export file instead of eval'ing raw .env content.
+        # This keeps the loader tolerant of unquoted spaces and avoids executing config text.
+        # shellcheck disable=SC1090
+        . "$_exports_file"
+        rm -f "$_exports_file"
     fi
     if [ -z "$XAI_API_KEY" ]; then
         echo "Error: XAI_API_KEY not set. Copy config/.env.example to config/.env and add your key." >&2
@@ -61,7 +81,6 @@ load_config() {
     fi
     XAI_MODEL="${XAI_MODEL:-grok-4-1-fast-reasoning}"
     X_DEFAULT_CATEGORY="${X_DEFAULT_CATEGORY:-ai}"
-    check_python3
     mkdir -p "$RUNS_DIR"
 }
 

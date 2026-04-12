@@ -21,6 +21,7 @@ cp config/.env.example config/.env
 ```
 
 Edit `config/.env`: paste your key into `XAI_API_KEY`, configure accounts and topics.
+Quote any value that contains spaces so the file stays shell-compatible.
 
 **Without `.env`:** skill works with explicit `--accounts`, `--query`, `--topics`.
 

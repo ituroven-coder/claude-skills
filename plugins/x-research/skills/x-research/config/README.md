@@ -15,6 +15,9 @@ cp .env.example .env
 
 Edit `.env` and paste your key into `XAI_API_KEY`.
 
+Important: keep `.env` shell-compatible. If a value contains spaces, wrap the whole value in quotes.
+Some runners use `. config/.env`, and unquoted values such as `Claude Code` will be treated as commands.
+
 ## 3. Configure accounts & topics
 
 Edit `.env` to add X accounts you want to follow and topics you care about.
@@ -31,6 +34,10 @@ X_ACCOUNTS_AI=elonmusk,sama,AndrewYNg
 
 X_ACCOUNTS_CRYPTO_LABEL="Crypto"
 X_ACCOUNTS_CRYPTO=VitalikButerin,cz_binance
+
+# Quote values with spaces
+X_TOPICS_OPENAI="GPT,ChatGPT,OpenAI,Codex,gpt 5.4"
+X_TOPICS_ANTHROPIC="Claude,Anthropic,ClaudeCode,Claude Code"
 ```
 
 **Note:** `allowed_x_handles` API limit is 10 per request. Categories with >10 accounts are automatically batched.
