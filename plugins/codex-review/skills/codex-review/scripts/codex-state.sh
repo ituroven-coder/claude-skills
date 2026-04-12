@@ -53,6 +53,10 @@ cmd_get() {
         get_effective_session_id
         return
     fi
+    if [[ "$field" == "verdict" ]]; then
+        parse_verdict_file "$STATE_DIR/verdict.txt"
+        return
+    fi
     local val
     val="$(read_state_field "$field")"
     if [[ -z "$val" ]]; then
@@ -100,7 +104,7 @@ case "${1:-}" in
         echo "  dir               Print state directory path for current branch"
         echo "  reset             Reset iterations/phase (keep session_id)"
         echo "  reset --full      Full reset + delete notes"
-        echo "  get <field>       Get a single field"
+        echo "  get <field>       Get a single field (special: 'verdict' reads verdict.txt)"
         echo "  set <field> <val> Set a field (e.g. session_id)"
         exit 1
         ;;

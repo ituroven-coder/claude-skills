@@ -209,7 +209,7 @@ The plugin works transparently from git worktrees:
 
 When `AUTO_REVIEW=true` in `.codex-review/config.env`, the plugin enforces automated review:
 
-- **Plan phase**: a plugin hook blocks `ExitPlanMode` until `verdict.txt` contains `APPROVED`. If the verdict is missing or not approved, the hook denies the exit and instructs Claude to load the codex-review skill and run plan review first.
+- **Plan phase**: a plugin hook blocks `ExitPlanMode` until Codex approves the plan **AND** the approval was issued in the current Claude session. The hook binds each plan review to the Claude session that ran it, so a stale verdict from a previous task or session cannot silently auto-approve a new plan. If the verdict is missing, stale, not approved, or from a different session, the hook denies the exit and instructs Claude to load the codex-review skill and run plan review first.
 - **Code phase**: after implementation, Claude automatically sends code for review and iterates until approved.
 
 No additional configuration needed — the hook is declared in `plugin.json` and auto-registered when the plugin is enabled.

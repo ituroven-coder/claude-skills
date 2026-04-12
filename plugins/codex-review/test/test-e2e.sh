@@ -124,8 +124,16 @@ assert_eq() {
     fi
 }
 
+# Fake Claude session_id used across all hook calls in a scenario.
+# Must match the hook's stdin regex (hex + dashes only).
+SID_E2E="abcdef01-2345-6789-abcd-ef01e2ee2ee2"
+
+hook_stdin() {
+    printf '{"session_id":"%s","hook_event_name":"PermissionRequest","tool_name":"ExitPlanMode"}\n' "$1"
+}
+
 run_hook_in() {
-    (cd "$1" && echo '{}' | sh "$HOOK" 2>/dev/null) || true
+    (cd "$1" && hook_stdin "$SID_E2E" | sh "$HOOK" 2>/dev/null) || true
 }
 
 init_test_repo() {
@@ -137,8 +145,13 @@ init_test_repo() {
         git config user.email "e2e@test.com"
         git config user.name "E2E Test"
         git commit -q --allow-empty -m "init"
-        mkdir -p .codex-review
+        mkdir -p .codex-review/main
         printf 'AUTO_REVIEW=true\n' > .codex-review/config.env
+        # Pre-claim the session. Simulates a Claude session that has already
+        # touched the hook once and thus owns the current state dir. Without
+        # this, every first hook call in a scenario would cold-start and
+        # purge any verdict.txt written by codex-review.sh.
+        printf '%s\n' "$SID_E2E" > .codex-review/main/current_session.txt
     )
 }
 
@@ -152,11 +165,13 @@ scenario_approve() {
     RA="$TMPDIR_BASE/test-e2e-approve-$$"
     init_test_repo "$RA"
 
-    # --- A1: cold-start (no init yet, no verdict) ---
-    printf "A1: cold-start hook should deny\n"
+    # --- A1: session claimed but no review yet → deny "no verdict" ---
+    # init_test_repo pre-claims the session, so this call hits the
+    # "matching session + missing verdict.txt" branch, not cold-start.
+    printf "A1: pre-init hook should deny (no verdict)\n"
     out_a1="$(run_hook_in "$RA")"
     assert_contains "hook denies before any review" "$out_a1" '"behavior":"deny"'
-    assert_contains "cold-start message" "$out_a1" "No Codex plan verdict found"
+    assert_contains "no-verdict message" "$out_a1" "No Codex plan verdict found"
 
     # --- A2: init + plan with approve fixture ---
     printf "A2: init + plan (approve fixture)\n"
@@ -423,8 +438,8 @@ NOTE
     fi
 
     # 4. Bonus (informational, non-fatal) — fresh plan-review note exists
-    fresh_note="$(find "$state_dir_s/notes" -type f -name "plan-review-*.md" 2>/dev/null \
-        | xargs -I{} grep -L "STALE" {} 2>/dev/null | head -1)"
+    fresh_note="$(find "$state_dir_s/notes" -type f -name "plan-review-*.md" \
+        -exec grep -L "STALE" {} + 2>/dev/null | head -1)"
     if [ -n "$fresh_note" ]; then
         printf "  INFO: fresh plan-review note created (full plan review ran)\n"
     else

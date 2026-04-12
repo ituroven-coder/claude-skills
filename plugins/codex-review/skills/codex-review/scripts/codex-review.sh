@@ -186,14 +186,12 @@ read_verdict() {
     local output="$1"
     local verdict_file="$STATE_DIR/verdict.txt"
 
-    # Primary: read from verdict file
-    if [[ -f "$verdict_file" ]]; then
-        local file_verdict
-        file_verdict=$(tr -d '[:space:]' < "$verdict_file")
-        if [[ "$file_verdict" == "APPROVED" || "$file_verdict" == "CHANGES_REQUESTED" ]]; then
-            echo "$file_verdict"
-            return
-        fi
+    # Primary: read from verdict file (format-agnostic via helper)
+    local file_verdict
+    file_verdict="$(parse_verdict_file "$verdict_file")"
+    if [[ "$file_verdict" == "APPROVED" || "$file_verdict" == "CHANGES_REQUESTED" ]]; then
+        echo "$file_verdict"
+        return
     fi
 
     # Fallback: parse response text

@@ -156,7 +156,7 @@ bash scripts/codex-state.sh set phase implementing  # Обновить фазу
 
 ## Verdict
 
-Codex пишет свой вердикт в `verdict.txt` внутри state-каталога ветки (одно слово: `APPROVED` или `CHANGES_REQUESTED`). Файл очищается перед каждым запросом ревью. Если Codex не создал файл — скрипт парсит вердикт из текста ответа (fallback).
+Codex пишет свой вердикт в `verdict.txt` внутри state-каталога ветки (одно слово: `APPROVED` или `CHANGES_REQUESTED`). **Для чтения вердикта используй `bash scripts/codex-state.sh get verdict`** — helper возвращает `APPROVED`, `CHANGES_REQUESTED` или пустую строку (нет/невалидно). Файл очищается перед каждым запросом ревью. Если Codex не создал файл — скрипт парсит вердикт из текста ответа (fallback). Плагинный хук `ExitPlanMode` дополнительно связывает вердикт с текущей Claude-сессией через `current_session.txt` в том же каталоге — verdict, пришедший из другой сессии, удаляется.
 
 ## Правила
 
@@ -185,7 +185,7 @@ When `AUTO_REVIEW=true` in `.codex-review/config.env`, the entire review cycle r
    bash scripts/codex-review.sh plan --plan-file ~/.claude/plans/<slug>.md
    ```
    **IMPORTANT**: Always run `init` before the first `plan` review in a conversation. Even if `codex-state.sh show` reports an existing session, it may be stale (from a previous conversation). The `init` command safely archives the old session and creates a fresh one. Only skip `init` when re-submitting after `CHANGES_REQUESTED` within the same review cycle.
-3. **Formal verdict check** — read `verdict.txt` from the state dir (`bash scripts/codex-state.sh dir`). Proceed ONLY if the file contains the exact string `APPROVED`. Do NOT interpret review text — only the literal file content matters.
+3. **Formal verdict check** — run `bash scripts/codex-state.sh get verdict`. Proceed ONLY if it outputs the exact string `APPROVED`. Do NOT interpret review text — only the helper output matters.
 4. `CHANGES_REQUESTED` → fix the plan, resubmit (follow «Accept or Argue» rules). Iterate automatically up to the iteration limit.
 5. `APPROVED` → call `ExitPlanMode` (the hook auto-approves it)
 
@@ -199,7 +199,7 @@ When `AUTO_REVIEW=true` in `.codex-review/config.env`, the entire review cycle r
    ```bash
    bash scripts/codex-review.sh code "code description"
    ```
-8. **Formal verdict check** — same as step 3: read `verdict.txt`, check for exact string `APPROVED`.
+8. **Formal verdict check** — same as step 3: run `bash scripts/codex-state.sh get verdict` and check for exact string `APPROVED`.
 9. `CHANGES_REQUESTED` → fix code, resubmit automatically.
 10. `APPROVED` → work is complete, report to user.
 
