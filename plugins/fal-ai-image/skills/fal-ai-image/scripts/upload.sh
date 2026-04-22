@@ -7,18 +7,10 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/../config/.env"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/common.sh"
 
-# Load config
-if [ -f "$CONFIG_FILE" ]; then
-    # shellcheck disable=SC1090
-    . "$CONFIG_FILE"
-fi
-
-if [ -z "$FAL_KEY" ]; then
-    echo "Error: FAL_KEY not found. Set in config/.env or environment."
-    exit 1
-fi
+load_config
 
 # Defaults
 FILE_PATH=""
