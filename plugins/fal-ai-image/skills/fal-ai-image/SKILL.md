@@ -1,107 +1,146 @@
 ---
 name: fal-ai-image
-description: "Generate/edit images via fal.ai nano-banana-pro. Supports reference images (Edit mode) and text rendering in any language including Cyrillic. ALWAYS read SKILL.md before first use."
+description: "Generate/edit images via fal.ai. Supports Google Nano Banana Pro and OpenAI GPT Image 2 selected from config/.env. Supports reference images and strong text rendering. ALWAYS read SKILL.md before first use."
 ---
 
 # fal-ai-image
 
-Generate images via fal.ai nano-banana-pro (Gemini 3 Pro Image).
-Best for: infographics, text rendering, complex compositions.
+Generate images via fal.ai. The skill now supports two fal-hosted models:
+
+- **Google Nano Banana Pro** (`fal-ai/nano-banana-pro`) — default, backward-compatible
+- **OpenAI GPT Image 2** (`openai/gpt-image-2`) — enabled from `config/.env`
+
+Synonyms the agent should treat as equivalent:
+
+- `gpt` = `openai` = GPT Image 2
+- `nano banana` = `google` = `gemini` = Nano Banana Pro
+
+Best for: infographics, text rendering, banners, photo edits, reference-based compositions.
 
 ## STOP — Read Before Acting
 
-- **DO NOT** use Pillow, ImageMagick, or any post-processing for text/logo overlay — this model renders text natively, including Cyrillic and CJK
-- **DO NOT** use Generate mode when user provides reference images — use **Edit mode**
-- **DO NOT** launch general-purpose subagents — use `Task` with `subagent_type: "Bash"` and `model: "haiku"`
+- **DO NOT** use Pillow, ImageMagick, or post-processing for text/logo overlay unless the user explicitly asked for that workflow
+- **DO NOT** use Generate mode when the user provided reference images — use **Edit mode**
+- **DO NOT** assume GPT is active — check `config/README.md` logic; if no selector is configured, the skill stays on Nano Banana
+- **DO NOT** guess provider-specific params — Nano Banana and GPT Image 2 use different schemas
+- **DO** pass `--model ...` when the user explicitly asks for a specific model/provider or asks to compare providers
 - **DO NOT** skip uploading local files — run `upload.sh` first to get URLs for `edit.sh`
-- **DO NOT** guess script parameters — check the tables below
 
 ## Quick Start Decision
 
+```text
+Reference images provided?  -> Edit mode   (upload.sh -> edit.sh)
+Text-only generation?       -> Generate mode (generate.sh)
+
+Model comes from config/.env:
+  no selector set           -> Nano Banana Pro
+  FAL_IMAGE_PROVIDER=openai -> GPT Image 2
+  FAL_IMAGE_MODEL=...       -> exact override
 ```
-User gave reference images?  → Edit mode  (upload.sh → edit.sh)
-User wants text-only gen?    → Generate mode (generate.sh)
-Multiple images needed?      → Parallel Bash/haiku subagents
-```
-
-## Model Capabilities
-
-- Excellent text rendering (Latin, Cyrillic, CJK) — no post-processing needed
-- Composes logos, product photos, and text into banners in a single pass
-- Understands layout instructions ("left side text, right side product photo")
-- Handles complex infographics, charts, and diagrams
-- Edit mode blends reference images naturally with prompt guidance
-
-## Compatibility
-
-Scripts are POSIX sh compatible — work in cloud sandboxes (`/bin/sh`) and locally (`bash`).
-No bashisms: `[[ ]]`, `${BASH_SOURCE}`, `source` etc. are NOT used.
 
 ## Config
 
-Requires `FAL_KEY` in `config/.env` or environment.
-Get key: https://fal.ai/dashboard/keys
+Requires `FAL_KEY` in `config/.env` or the environment.
 
-## Two Modes
+Model selection:
 
-### 1. Generate (text-to-image)
-Create images from text prompt only.
-Script: `scripts/generate.sh`
+1. `--model` — one-off override for the current command
+2. `FAL_IMAGE_MODEL` — exact override in config
+3. `FAL_IMAGE_PROVIDER` — `google` or `openai`
+4. nothing set — default to Nano Banana Pro
 
-### 2. Edit (image-to-image)
-Create images using reference images (up to 14).
-Script: `scripts/edit.sh`
+Use `--model` whenever the user explicitly says things like:
+
+- "сделай через GPT"
+- "используй OpenAI"
+- "сделай через Google / Gemini / Nano Banana"
+- "какие тут есть провайдеры?"
+
+Answer that the skill supports two choices and map the command like this:
+
+- `--model gpt` for OpenAI GPT Image 2
+- `--model gemini` or `--model nano-banana` for Nano Banana
+
+OpenAI quality default:
+
+- `FAL_IMAGE_OPENAI_QUALITY=medium` unless overridden with `--quality`
+- this skill intentionally uses `medium` as the default for GPT to avoid expensive exploratory runs
+
+Full setup and troubleshooting: [config/README.md](config/README.md).
+
+Read references only when needed:
+
+- [references/MODELS.md](references/MODELS.md) — selector precedence, aliases, cost heuristics
+- [references/EDITING.md](references/EDITING.md) — generate vs edit, `mask_url`, inpainting behavior
+
+## Model Notes
+
+### Nano Banana Pro
+
+Strengths:
+
+- lower-friction default for existing installs
+- strong text rendering, including Cyrillic
+- good at infographics, banners, and mixed text/image layouts
+- supports `--web-search` in generate mode
+
+Main params:
+
+- `--aspect-ratio`
+- `--resolution`
+- `--web-search` (generate only)
+
+### OpenAI GPT Image 2
+
+Strengths:
+
+- stronger prompt adherence and fine-grained edits
+- better photorealism and product-style renders
+- native `quality` control
+- uses the same `FAL_KEY` through fal, no separate OpenAI key
+- current fal pricing is size/quality-dependent; a rough high-quality mental model is about `$0.18` per image, but check the live model page before quoting an exact number
+
+Main params:
+
+- `--image-size`
+- `--quality`
+
+Compatibility layer:
+
+- if `--image-size` is omitted, the scripts derive a valid OpenAI `image_size` from `--aspect-ratio` + `--resolution`
+- this lets old prompts continue working after the provider switch in config
 
 ## Workflow
 
-**IMPORTANT**: Run generation via Task tool with Haiku subagent to avoid blocking main context.
+### Generate mode
 
-### For Generate mode:
+1. Decide model from config
+2. Clarify missing params only if needed:
+   - Nano Banana: aspect ratio, resolution
+   - GPT Image 2: image size and quality
+3. Propose save path based on project structure
+4. Run `generate.sh`
+5. Parse result JSON, report URL and local files if downloaded
 
-1. **Clarify params** (if not specified):
-   - Aspect ratio: `1:1`, `16:9`, `9:16`, `4:3`, etc.
-   - Resolution: `1K` (default), `2K`, `4K`
+### Edit mode
 
-2. **Propose save path** based on project structure:
-   - Check for `./images/`, `./assets/`, `./static/`
-   - Suggest: "Save to `./images/infographic_coffee.png`?"
-
-3. **Show price & confirm**:
-   ```
-   Cost: $0.15/image (4K: $0.30)
-   Confirm? (yes/no)
-   ```
-
-4. **Launch subagent**:
-   ```
-   Task tool:
-   - subagent_type: "Bash"
-   - model: "haiku"
-   - run_in_background: true
-   - prompt: Run generate.sh with params
-   ```
-
-5. **Report result**: Parse JSON output, show image URL, read saved file.
-
-### For Edit mode:
-
-1. **Get reference images**:
-   - If URLs provided → use directly
-   - If local files → run `upload.sh` first to get URLs
-
-2. **Clarify prompt**: What to do with references?
-
-3. **Show price & confirm**: Same as generate
-
-4. **Launch subagent** with `edit.sh`
-
-5. **Report result**
+1. Get reference images:
+   - URL already available -> use directly
+   - local file -> `upload.sh`
+2. Decide model from config
+3. Clarify edit intent
+4. Run `edit.sh`
+5. Parse result JSON, report URL and local files if downloaded
 
 ## Scripts
 
 ### generate.sh
+
+Nano Banana example:
+
 ```bash
 sh scripts/generate.sh \
+  --model "gemini" \
   --prompt "infographic about coffee brewing" \
   --aspect-ratio "9:16" \
   --resolution "1K" \
@@ -109,19 +148,49 @@ sh scripts/generate.sh \
   --filename "coffee_infographic"
 ```
 
-| Param | Required | Default | Values |
-|-------|----------|---------|--------|
-| `--prompt` | yes | - | text |
-| `--aspect-ratio` | no | 1:1 | 21:9, 16:9, 3:2, 4:3, 5:4, 1:1, 4:5, 3:4, 2:3, 9:16 |
-| `--resolution` | no | 1K | 1K, 2K, 4K |
+GPT Image 2 example:
+
+```bash
+sh scripts/generate.sh \
+  --model "gpt" \
+  --prompt "realistic product hero shot with sharp packaging text" \
+  --image-size "landscape_4_3" \
+  --quality "medium" \
+  --output-dir "./images" \
+  --filename "product_hero"
+```
+
+Compatibility example for GPT:
+
+```bash
+sh scripts/generate.sh \
+  --model "openai" \
+  --prompt "editorial portrait, window light, magazine cover layout" \
+  --aspect-ratio "4:3" \
+  --resolution "2K"
+```
+
+| Param | Required | Default | Notes |
+|-------|----------|---------|-------|
+| `--prompt` | yes | - | text prompt |
+| `--model` | no | config / Nano Banana fallback | `nano-banana`, `google`, `gemini`, `gpt`, `openai`, or exact endpoint |
+| `--aspect-ratio` | no | `1:1` | Nano native; for GPT used only when `--image-size` is omitted |
+| `--resolution` | no | `1K` | Nano native; for GPT used only when `--image-size` is omitted |
+| `--image-size` | no | derived from ratio/resolution | GPT only; preset (`landscape_4_3`) or `WIDTHxHEIGHT` |
+| `--quality` | no | `medium` via config | GPT only; `low`, `medium`, `high` |
 | `--num-images` | no | 1 | 1-4 |
-| `--output-dir` | no | - | path |
-| `--filename` | no | generated | base name |
-| `--web-search` | no | false | flag |
+| `--output-format` | no | `png` | `jpeg`, `png`, `webp` |
+| `--output-dir` | no | - | local path |
+| `--filename` | no | `generated` | base filename |
+| `--web-search` | no | false | Nano only; ignored for GPT |
 
 ### edit.sh
+
+Nano Banana example:
+
 ```bash
 sh scripts/edit.sh \
+  --model "gemini" \
   --prompt "combine these into a collage" \
   --image-urls "https://example.com/img1.png,https://example.com/img2.png" \
   --aspect-ratio "16:9" \
@@ -129,48 +198,55 @@ sh scripts/edit.sh \
   --filename "collage"
 ```
 
-| Param | Required | Default | Values |
-|-------|----------|---------|--------|
-| `--prompt` | yes | - | text |
-| `--image-urls` | yes | - | comma-separated URLs (max 14) |
-| `--aspect-ratio` | no | auto | auto, 1:1, 16:9, etc. |
-| `--resolution` | no | 1K | 1K, 2K, 4K |
-| `--num-images` | no | 1 | 1-4 variations |
-| `--output-dir` | no | - | path |
-| `--filename` | no | edited | base name |
+GPT Image 2 example:
 
-### upload.sh (for local files)
 ```bash
-# Get URL for local file
+sh scripts/edit.sh \
+  --model "gpt" \
+  --prompt "make this product shot look like a premium studio campaign" \
+  --image-urls "https://example.com/source.png" \
+  --mask-url "https://example.com/mask.png" \
+  --image-size "auto" \
+  --quality "medium" \
+  --output-dir "./images" \
+  --filename "studio_edit"
+```
+
+| Param | Required | Default | Notes |
+|-------|----------|---------|-------|
+| `--prompt` | yes | - | edit instruction |
+| `--image-urls` | yes | - | comma-separated URLs |
+| `--model` | no | config / Nano Banana fallback | `nano-banana`, `google`, `gemini`, `gpt`, `openai`, or exact endpoint |
+| `--mask-url` | no | - | GPT edit only; optional mask for targeted edits |
+| `--aspect-ratio` | no | `auto` | Nano native; for GPT used only when `--image-size` is omitted |
+| `--resolution` | no | `1K` | Nano native; for GPT used only when `--image-size` is omitted |
+| `--image-size` | no | derived from ratio/resolution / `auto` | GPT only |
+| `--quality` | no | `medium` via config | GPT only |
+| `--num-images` | no | 1 | 1-4 |
+| `--output-format` | no | `png` | `jpeg`, `png`, `webp` |
+| `--output-dir` | no | - | local path |
+| `--filename` | no | `edited` | base filename |
+
+### upload.sh
+
+```bash
+# Get hosted URL for local file
 URL=$(sh scripts/upload.sh --file /path/to/image.png)
 
-# Or get base64 data URI (for small files)
+# Get base64 data URI for manual API work
 URI=$(sh scripts/upload.sh --file /path/to/image.png --base64)
 ```
 
-## Parallel Generation
+## Cost Guidance
 
-For multiple images — launch several subagents in parallel:
+- **Nano Banana Pro** is the cheaper and safer default for quick iterations
+- **GPT Image 2** cost depends heavily on `quality` and `image_size`
+- this skill defaults GPT to `medium` quality to reduce surprise spend
 
-```
-Task 1: generate "cat in space" → cat_space.png
-Task 2: generate "dog on moon" → dog_moon.png
-Task 3: generate "bird in ocean" → bird_ocean.png
-```
-
-Each runs independently via Haiku, results collected when done.
-
-## Pricing
-
-- Generate: **$0.15**/image
-- Edit: **$0.15**/edit
-- 4K resolution: **$0.30** (2x)
-- Web search: **+$0.015**
-
-Formula: `price = num_images * (resolution == "4K" ? 0.30 : 0.15) + (web_search ? 0.015 : 0)`
+For current pricing, check fal's model pages in [config/README.md](config/README.md).
 
 ## Notes
 
-- URLs expire in ~1 hour — save locally if needed
-- Uploaded files stored 7 days on fal.ai, then auto-deleted
-- Model excels at text rendering and infographics
+- result URLs expire in roughly one hour — download locally if you need persistence
+- uploaded files on fal storage are temporary
+- `edit.sh` now polls the same `/edit` queue endpoints documented by fal

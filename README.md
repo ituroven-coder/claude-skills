@@ -214,11 +214,13 @@ SSH подключение к удалённым серверам с agent forwa
 
 ### [fal-ai-image](plugins/fal-ai-image/skills/fal-ai-image)
 
-Генерация изображений через fal.ai nano-banana-pro (Gemini 3 Pro Image).
+Генерация изображений через fal.ai с переключением модели из конфига.
 
-- Генерация из текстового промпта (text-to-image)
-- Редактирование с референсными изображениями (image-to-image)
-- Поддержка разрешений 1K / 2K / 4K
+- Google Nano Banana Pro по умолчанию для обратной совместимости
+- OpenAI GPT Image 2 через тот же `FAL_KEY`
+- Генерация из текста и редактирование по референсам
+- Совместимость старых `--aspect-ratio` / `--resolution` сценариев после переключения на GPT
+- Разовый форс модели через `--model gpt|openai|nano-banana|google|gemini`
 
 **Триггеры (RU):**
 - "сгенерируй изображение"

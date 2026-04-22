@@ -45,7 +45,7 @@
     },
     {
       "name": "fal-ai-image",
-      "description": "Generate images using fal.ai nano-banana model",
+      "description": "Generate and edit images via fal.ai Nano Banana Pro or OpenAI GPT Image 2",
       "source": "./plugins/fal-ai-image",
       "category": "productivity"
     },
